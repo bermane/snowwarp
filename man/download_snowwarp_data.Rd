@@ -25,8 +25,9 @@ The download_snowwarp_data function downloads imagery pre-processed on Google Ea
 before running the \code{\link{get_snowwarp_tiles}} and \code{\link{process_snowwarp}} functions.
 }
 \description{
-This function downloads imagery from Google Earth Engine that will be input into the SnowWarp algorithm. Please refer to the the start_snowwarp.html
-instructions, and follow the steps to acquire the necessary imagery. You may have issues if Google Chrome is not
+This function downloads imagery from Google Earth Engine that will be input into the SnowWarp algorithm. Please refer to the
+instruction manual \url{https://htmlpreview.github.io/?https://github.com/bermane/snowwarp/blob/master/start_snowwarp.html},
+and follow the steps to acquire the necessary imagery. You may have issues if Google Chrome is not
 your default web browser.
 }
 \examples{

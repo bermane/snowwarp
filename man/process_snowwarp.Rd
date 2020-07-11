@@ -38,7 +38,8 @@ in of themselves, or can be further input into the extract_snowwarp_stats functi
 These files are written to 'folder/output'.
 }
 \description{
-This function processes SnowWarp using imagery downloaded from Google Earth Engine. Please refer to the start_snowwarp.html instructions,
+This function processes SnowWarp using imagery downloaded from Google Earth Engine. Please refer to instruction manual
+\url{https://htmlpreview.github.io/?https://github.com/bermane/snowwarp/blob/master/start_snowwarp.html},
 to ensure you have properly downloaded the necessary imagery.
 }
 \examples{
