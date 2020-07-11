@@ -1,0 +1,44 @@
+Package: snowwarp
+Title: Implement SnowWarp Algorithm
+Version: 0.0.0.9000
+Authors@R: 
+    c(person(given = "Ethan E.",
+           family = "Berman",
+           role = c("aut", "cre"),
+           email = "bermane@gmail.com"),
+    person(given = "Saverio",
+           family = "Francini",
+           role = "aut",
+           email = "saverio.francini@unifi.it"),
+    person(given = "Nicholas C.",
+           family = "Coops",
+           role = "aut",
+           email = 'nicholas.coops@ubc.ca'))
+Description: This package provides open-source access to SnowWarp fractional snow covered area (fSCA) data and accompanying annual statistics.
+License: `use_mit_license()`, `use_gpl3_license()` or friends to
+    pick a license
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
+Imports:
+        tidyverse,
+        gdalUtils,
+        raster,
+        doParallel,
+        ArgumentCheck,
+        iterators,
+        mmap,
+        foreach,
+        pspline,
+        smoothie,
+        dtw,
+        smoother,
+        parallel,
+        spatial.tools,
+        zoo,
+	googledrive
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
