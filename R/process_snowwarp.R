@@ -35,6 +35,7 @@
 #' file_ext = 'studyarea1',
 #' tiles = 1:8)
 #'
+#' @export
 
 process_snowwarp <- function(
   folder, #main directory where data is located

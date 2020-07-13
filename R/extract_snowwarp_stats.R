@@ -28,6 +28,7 @@
 #' file_ext = 'studyarea1',
 #' tiles = 1:8)
 #'
+#' @export
 
 extract_snowwarp_stats <- function(
   folder, #main directory where data is located

@@ -13,6 +13,7 @@
 #' For Windows:
 #' get_snowwarp_tiles(folder = 'D:/GEE_snow_download')
 #'
+#' @export
 
 get_snowwarp_tiles <- function(folder) { #main directory where data is located
 

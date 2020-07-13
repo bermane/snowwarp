@@ -24,6 +24,7 @@
 #' link = 'shareable google drive folder link',
 #' folder = 'D:/GEE_snow_download')
 #'
+#' @export
 
 download_snowwarp_data <- function(
   mail,                                  # your drive account e-mail
