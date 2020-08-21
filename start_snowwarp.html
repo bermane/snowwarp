@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Start SnowWarp!</title>
+
+<script>// Hide empty <a> tag within highlighted CodeBlock for screen reader accessibility (see https://github.com/jgm/pandoc/issues/6352#issuecomment-626106786) -->
+// v0.0.1
+// Written by JooYoung Seo (jooyoung@psu.edu) and Atsushi Yasumoto on June 1st, 2020.
+
+document.addEventListener('DOMContentLoaded', function() {
+  const codeList = document.getElementsByClassName("sourceCode");
+  for (var i = 0; i < codeList.length; i++) {
+    var linkList = codeList[i].getElementsByTagName('a');
+    for (var j = 0; j < linkList.length; j++) {
+      if (linkList[j].innerHTML === "") {
+        linkList[j].setAttribute('aria-hidden', 'true');
+      }
+    }
+  }
+});
+</script>
+
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Start SnowWarp!</h1>
+
+
+
+<div id="intro" class="section level2">
+<h2>Intro</h2>
+<p>Welcome to the snowwarp package! This package was created to provide open-source access to SnowWarp fractional snow covered area (fSCA) data and accompanying annual statistics. SnowWarp is a new data fusion approach to create a daily time-series of 30 m snow cover observations. It was created to meet the data needs of applied researchers, who desire a snow cover dataset with a high enough spatial and temporal resolution to match the scale of their work. The product is derived by leveaging daily MODIS snow cover data, which captures the temporal dynamics of snow cover, and Dynamic Time Warping (DTW), which is used to re-order historical Landsat observations to account for inter-annual variability. For more information on the SnowWarp algorithm and it’s methods see <a href="https://www.sciencedirect.com/science/article/abs/pii/S0034425718303626">Berman et al. (2018)</a>. For methods of key annual snow statistics and a novel application of SnowWarp please see <a href="https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0215243">Berman et al. (2019)</a>.</p>
+<p>Please note the following when using SnowWarp:</p>
+<ol style="list-style-type: decimal">
+<li>fSCA data from MODIS and Landsat is now used as the input into the SnowWarp algorithm. fSCA is calculated using a linear regression on NDSI following the methods of <a href="https://www.sciencedirect.com/science/article/pii/S0034425719306388">Aalstad et al. (2020)</a>. The regression formula is fSCA = (1.45) * NDSI -0.01. This was not the orginal input data used in Berman et al. (2018) and this data has not been validated! Please use at your own discretion. That being said, the new fSCA approach should help to deal with the systematic underestimation of fSCA that was found in Landsat TMSCAG data.</li>
+<li>Data is pre-processed in Google Earth Engine (GEE) in WGS84 projection. Output files are GeoTiff (.tif) and ~30 meters resolution.</li>
+<li>Data is currently available from August 1, 2000 until July 31, 2019. New data will be added at the end of each annual ‘winter’ year (i.e. late summer).</li>
+<li>Use of SnowWarp data is free but must be cited. Please cite:</li>
+</ol>
+<ol style="list-style-type: lower-roman">
+<li><a href="https://www.sciencedirect.com/science/article/abs/pii/S0034425718303626">Berman et al. (2018)</a></li>
+<li>Berman, E.E., Francini, S., Coops, N.C. (2020). snowwarp. R package.</li>
+</ol>
+<p>The following instructions should be followed to ensure proper use of the snowwarp package. The general workflow is:</p>
+<ol style="list-style-type: decimal">
+<li>Organize and pre-process data on Google Earth Engine.</li>
+<li>Download pre-processed data.</li>
+<li>Process SnowWarp daily fSCA.</li>
+<li>Extract key SnowWarp annual statistics.</li>
+</ol>
+</div>
+<div id="organize-and-pre-process-data-on-google-earth-engine" class="section level2">
+<h2>1. Organize and pre-process data on Google Earth Engine</h2>
+<ol style="list-style-type: decimal">
+<li>Create and/or sign-in to your Google Earth Engine Account</li>
+<li><a href="https://code.earthengine.google.com/?accept_repo=users/sfrancini/SnowWarpPackage">Open the SnowWarpPackage API by following this link</a>. Opening the link will create a script on your GEE account that can be used to pre-process data. The script will appear in a “Reader” repository in your “Scripts” panel.</li>
+<li>Click on the “SnowWarp-API” script and click “Run”. This should open the SnowWarp API and allow you to specify a shapefile (study area) and Google Drive output folder.</li>
+<li>Follow the instructions to upload a shapefile of your study area and download the data to Google Drive. Please note that a free account only has 15 GB of space on Google Drive. If your study area is too large (i.e. when you try to pre-process the data on GEE you get an error), try cutting the area into smaller parts and running separately. Once you download the imagery to your hard drive, you can delete the data from Google Drive and run the next study area chunk.</li>
+</ol>
+</div>
+<div id="download-pre-processed-data" class="section level2">
+<h2>2. Download pre-processed data</h2>
+<p>Once the data is pre-processed on GEE and located on your Google Drive account, the rest of the process takes place in R. Use the download_snowwarp_data function (run “?download_snowwarp_data” for details) to download the pre-processed imagery to a local hard drive. The folder where you save the imagery will be the “folder” variable for the rest of the snowwarp functions.</p>
+</div>
+<div id="process-snowwarp-daily-fsca" class="section level2">
+<h2>3. Process SnowWarp daily fSCA</h2>
+<p>This is main part of the SnowWarp algorithm and also the most time consuming. Depending on your processing power, read/write speed, and allocation of cpus for parallel processing, this function can run from anywhere from a few days to a couple weeks. Before getting started, run the get_snowwarp_tiles function (run “?get_snowwarp_tiles” for details) function, which will return the number of Landsat tiles you need to process. When you run the process_snowwarp function (run “process_snowwarp” for details), you can specify the tile numbers you want to process in each iteration. It is always better to process all the years of data you want at the same time, so if you have space or processing constraints, start by restricting the number of tiles processed in each iteration. SnowWarp outputs daily fSCA and each raster contains 365 bands corresponding to August 1 - July 31. For example, if you run years = c(2000, 2004), you will get two rasters with data from August 1, 2000 - July 31, 2001 and August 1, 2004 - July 31, 2005. Leap years are not accounted for (365 days every year). The output will be located inside “folder/output”, where “folder” is the directory with the pre-processed imagery from GEE.</p>
+</div>
+<div id="extract-key-annual-statistics" class="section level2">
+<h2>4. Extract key annual statistics</h2>
+<p>The SnowWarp dataset contains daily values at ~30 m spatial resolution – This is a LOT of data!!! For many applications, users may only be interested in annual statistics that characterize snow dynamics. The extract_snowwarp_stats function (run “?extract_snowwarp_stats” for details) processes three key statistics and outputs them into an additional raster file (one per winter year) in the “output” folder with 3 bands. The 3 bands are:</p>
+<ol style="list-style-type: decimal">
+<li>Date of snow accumulation</li>
+<li>Date of snow melt</li>
+<li>Number of days with snow cover in year</li>
+</ol>
+<p>Many other statistics can be calculated from SnowWarp, but these should get you started!</p>
+</div>
+<div id="thats-it" class="section level2">
+<h2>That’s it!</h2>
+<p>Thanks for your interest in these data! We are very excited to share SnowWarp with the research community and make it available to data users for many applications. This is a new package and deals with a large amount of data and processing, and we would definitely appreciate your feedback about it’s usability and functionality. There is lots of room for this code to be optimized for easier use and faster processing of large areas, and we look forward to adding on to it in the future. Any effort to help improve functionality is welcome!</p>
+<p>Best of luck,</p>
+<p>Ethan Berman, Saverio Francini, and Nicholas Coops. 2020.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
