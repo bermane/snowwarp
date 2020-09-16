@@ -19,7 +19,10 @@
 #' @return The process_snowwarp function returns .tif rasters with daily values of fractional snow covered area. Each file
 #' contains values from August 1st - July 31st of the subsequent year. These daily values can be used
 #' in of themselves, or can be further input into the extract_snowwarp_stats function to calculate annual statistics.
-#' These files are written to 'folder/output'. **Please note that there is a small bug that sometimes returns values greater than 100.
+#' These files are written to 'folder/output'. Temporary files generated during processing are stored in 'folder/output'
+#' and organized by tile. These need to be deleted manually! Once the first tile is finished, check the output folder
+#' to make sure everything is working correctly before deleting the temporary files.
+#' **Please note that there is a small bug that sometimes returns values greater than 100.
 #' After processing snowwarp you should set all values greater than 100 to NA**
 #' @seealso \code{\link{get_snowwarp_tiles}}, \code{\link{extract_snowwarp_stats}}, \code{\link{download_snowwarp_data}}
 #' @examples
