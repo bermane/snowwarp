@@ -774,7 +774,7 @@ process_snowwarp <- function(
     print(stringr::str_c('Processing of Landsat tile ', l, ' finished at ', Sys.time(), '.'))
 
     #delete all files from temp folder
-    #invisible(unlink(stringr::str_c('temp/tile_', l), recursive = T))
+    invisible(unlink(stringr::str_c('temp/tile_', l), recursive = T))
 
   } #end of loop over landsat tiles
 
