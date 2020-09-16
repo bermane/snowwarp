@@ -4,13 +4,7 @@
 \alias{extract_snowwarp_stats}
 \title{Extract SnowWarp Annual Statistics}
 \usage{
-extract_snowwarp_stats(
-  folder,
-  cpus,
-  file_ext = "",
-  tiles = NULL,
-  maxmemory = 1e+10
-)
+extract_snowwarp_stats(folder, cpus, tiles = NULL)
 }
 \arguments{
 \item{folder}{The main directory where the Google Earth Engine files are located on your computer. There should already be an 'output' folder
@@ -19,11 +13,7 @@ inside this directory with the data from the process_snowwarp function.}
 \item{cpus}{The number of cpus to use for parallel processing. This should not be greater than the number of tiles since each tile is
 processed in parallel.}
 
-\item{file_ext}{File name descriptor that you added to the process_snowwarp function. No descriptor by default.}
-
 \item{tiles}{Tiles that you have already processed using the process_snowwarp function.}
-
-\item{maxmemory}{The amount of memory allocated for the raster package. Defaults to 1e+10, which is slightly more than default.}
 }
 \value{
 The extract_snowwarp_stats function returns .tif rasters with annual snow statistics (for each winter year). Each file
@@ -39,13 +29,11 @@ Annual stats will be extracted for all the years of SnowWarp that were processed
 For Mac:
 extract_snowwarp_stats(folder = '/Users/MyUser/Documents/GEE_snow_download',
 cpus = 8,
-file_ext = 'studyarea1',
 tiles = 1:8)
 
 For Windows:
 extract_snowwarp_stats(folder = 'D:/GEE_snow_download',
 cpus = 8,
-file_ext = 'studyarea1',
 tiles = 1:8)
 
 }

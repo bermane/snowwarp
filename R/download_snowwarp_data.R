@@ -33,8 +33,6 @@ download_snowwarp_data <- function(
   overwrite = T
   ){
 
-if (!("googledrive" %in% installed.packages()[,"Package"])) install.packages("googledrive")
-library(googledrive)
 googledrive::drive_auth(mail); print(googledrive::drive_user())
 filteredFiles <- googledrive::drive_ls(googledrive::as_id(link))
 if(dir.exists(folder)==F) dir.create(folder)

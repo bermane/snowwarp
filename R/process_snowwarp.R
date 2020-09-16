@@ -4,46 +4,50 @@
 #' \url{https://htmlpreview.github.io/?https://github.com/bermane/snowwarp/blob/master/start_snowwarp.html},
 #' to ensure you have properly downloaded the necessary imagery.
 #'
-#' @param folder The main directory where the Google Earth Engine files are located on your computer
-#' @param years The years of data you want processed. Must be numeric and between 2000-2018. Snowwarp runs on winter years (Aug 1st - July 31st)
+#' @param folder The main directory where the Google Earth Engine files are located on your computer.
+#' @param years The years of data you want processed. Must be numeric and between 2000-2019. Snowwarp runs on winter years (Aug 1st - July 31st)
 #' instead of calendar years, so years = 2005 means August 1, 2005 - July 31, 2006, etc.
 #' It is better to run all the years you want at once, and less tiles.
-#' @param cpus The number of cpus to use for parallel processing. This should not be greater than the number of tiles since each tile is
-#' processed in parallel.
-#' @param file_ext File name descriptor to add to end of output files. No descriptor by default.
+#' @param cpus The number of cpus to use for parallel processing. We recommend using at least half of the cpus on your machine. More if
+#' you are able. For example, note that often an "8" core machine means "16" cpus. Therefore this value should be >= 8.
+#' @param otb_dir The main directory where the Orfeo Toolbox is located on your computer.
+#' @param max_ram The maximum ram (in MB) available to the smoothing function from Orfeo Toolbox. Defaults to 256 and can only be increased.
+#' It is strongly advised to increase this number to at least half your computer's RAM. Consider using the same proportion of RAM as porportion of CPUS/threads.
 #' @param tiles Option to process a certain number of tiles. Run get_snowwarp_tiles first to get the total number of tiles.
-#' It is better to run the function over a smaller number of tiles and all the years desired. Think about ROM and number of processors available.
-#' Defaults to processing all tiles.
-#' @param maxmemory The amount of memory allocated for the raster package. Defaults to 1e+10, which is slightly more than default.
+#' It is better to run the function over a smaller number of tiles and all the years desired. SNOWWARP processes one tile at a time
+#' so you can run a test on the first tile. Defaults to processing all tiles.
 #' @return The process_snowwarp function returns .tif rasters with daily values of fractional snow covered area. Each file
 #' contains values from August 1st - July 31st of the subsequent year. These daily values can be used
 #' in of themselves, or can be further input into the extract_snowwarp_stats function to calculate annual statistics.
-#' These files are written to 'folder/output'.
+#' These files are written to 'folder/output'. **Please note that there is a small bug that sometimes returns values greater than 100.
+#' After processing snowwarp you should set all values greater than 100 to NA**
 #' @seealso \code{\link{get_snowwarp_tiles}}, \code{\link{extract_snowwarp_stats}}, \code{\link{download_snowwarp_data}}
 #' @examples
 #' For Mac:
 #' process_snowwarp(folder = '/Users/MyUser/Documents/GEE_snow_download',
 #' years = 2004:2008,
 #' cpus = 8,
-#' file_ext = 'studyarea1',
+#' otb_dir = '/Users/MyUser/Users/OTB-7.1.0-Darwin64'
+#' max_ram = 8000
 #' tiles = 1:8)
 #'
 #' For Windows:
 #' process_snowwarp(folder = 'D:/GEE_snow_download',
 #' years = 2004:2008,
 #' cpus = 8,
-#' file_ext = 'studyarea1',
+#' oct_dir = 'C:/OTB-7.1.0-Win64'
+#' max_ram = 8000
 #' tiles = 1:8)
 #'
 #' @export
 
 process_snowwarp <- function(
   folder, #main directory where data is located
-  years, #years of processing output. 2005 means August 1, 2005 till July 31, 2006 etc. Must be between 2000-2018
+  years, #years of processing output. 2005 means August 1, 2005 till July 31, 2006 etc. Must be between 2000-2019
   cpus, #number of cpus to use for parallel processing
-  file_ext = '', #file extension to add to end of output files
-  tiles = NULL, #option to process a certain number of tiles. run get_num_tiles first.
-  maxmemory = 1e+10 #maximum memory used by raster package
+  otb_dir, #main directory where Orfeo Toolbox is located
+  max_ram = 256, #maximum ram (in MB) available for smoothing. Defaults to 256.
+  tiles = NULL #option to process a certain number of tiles. run get_num_tiles first.
 ){
 
   ##################################
@@ -51,18 +55,10 @@ process_snowwarp <- function(
   ##################################
 
   #check for packages and return error if missing
-  packages <- c('tidyverse', 'gdalUtils', 'raster', 'doParallel', 'ArgumentCheck', 'iterators',
-                'mmap', 'foreach', 'pspline', 'smoothie', 'dtw', 'smoother', 'parallel')
+  packages <- c('tidyverse', 'gdalUtils', 'raster', 'doParallel', 'ArgumentCheck',
+                'foreach', 'pspline', 'smoothie', 'dtw', 'parallel')
   new_packages <- packages[!(packages %in% installed.packages()[,"Package"])]
   if(length(new_packages)) stop(paste0("\n Package ", new_packages," needed for this function to work. Please install it."))
-
-  #check for spatial.tools package and return error and instructions if missing
-  packages_st <- c('spatial.tools')
-  new_packages_st <- packages_st[!(packages_st %in% installed.packages()[,"Package"])]
-  if(length(new_packages_st)) {
-    stop(stringr::str_c('Package ', new_packages_st, ' needed for this function to work. Please install it ',
-                'using the following code: install.packages("spatial.tools", repos="http://R-Forge.R-project.org")'))
-  }
 
   #define local %operators%
   `%dopar%` <- foreach::`%dopar%`
@@ -97,9 +93,9 @@ process_snowwarp <- function(
       msg = "'years' is not a numeric vector",
       argcheck = check
     )
-  } else if(length(years[!(years %in% 2000:2018)])) {
+  } else if(length(years[!(years %in% 2000:2019)])) {
     ArgumentCheck::addError(
-      msg = "'years' does not only contain values from 2000-2018",
+      msg = "'years' does not only contain values from 2000-2019",
       argcheck = check
     )
   }
@@ -117,28 +113,34 @@ process_snowwarp <- function(
     )
   }
 
-  #add an error if file_ext is not character and is longer than 1
-  if(is.character(file_ext) == F) {
+  #add an error if otb_dir does not exist or smoothing function is not working
+  if(dir.exists(otb_dir) == F) {
     ArgumentCheck::addError(
-      msg = "'file_ext' is not a character vector",
+      msg = "'otb_dir' does not point to a valid directory",
       argcheck = check
     )
-  } else if(length(file_ext) != 1) {
+  } else if(length(list.files(path = stringr::str_c(otb_dir, '/bin'),
+                              pattern = 'otbcli_Smoothing', include.dirs = T)) < 1) {
     ArgumentCheck::addError(
-      msg = "'file_ext' does not contain a single value",
+      msg = "The smoothing function cannot be found inside the 'otb_dir'. Consider reinstalling Orfeo Toolbox",
       argcheck = check
     )
   }
 
-  #add an error if maxmemory is not numeric and is longer than 1
-  if(is.numeric(maxmemory) == F) {
+  #add an error if max_ram is not numeric and is a positive negative
+  if(is.numeric(max_ram) == F) {
     ArgumentCheck::addError(
-      msg = "'maxmemory' is not a numeric vector",
+      msg = "'max_ram' is not a numeric vector",
       argcheck = check
     )
-  } else if(length(maxmemory) != 1) {
+  } else if(max_ram != round(max_ram)) {
     ArgumentCheck::addError(
-      msg = "'maxmemory' does not contain a single value",
+      msg = "'max_ram' is not an integer",
+      argcheck = check
+    )
+  } else if(max_ram < 256) {
+    ArgumentCheck::addError(
+      msg = "'max_ram' cannot be less than 256",
       argcheck = check
     )
   }
@@ -150,18 +152,13 @@ process_snowwarp <- function(
   ###INITIAL SETUP###
   ###################
 
-  #set raster options to use a bit more memory
-  raster::rasterOptions(maxmemory = maxmemory)
-
   #set wd
   setwd(folder)
-
-  #set output file_ext with underscore
-  if(file_ext != '') file_ext = str_c('_', file_ext)
 
   #read in landsat and modis data
   ls_bands <- list.files(pattern = 'BandNamesLandsat', full.names = T)
   mod_bands <- list.files(pattern = 'BandNamesModis', full.names = T)
+
 
   #stop and print error if band files are missing
   if(length(ls_bands) == 0) stop('Files from Google Earth Engine are missing. Please verify or re-download.')
@@ -195,8 +192,8 @@ process_snowwarp <- function(
     if(is.numeric(tiles) == F) {
       stop("'tiles' is not a numeric vector")
     } else if(length(tiles[!(tiles %in% 1:length(ls_files))])) {
-        stop(stringr::str_c("'tiles' does not only have values between 1-", length(ls_files)))
-      }
+      stop(stringr::str_c("'tiles' does not only have values between 1-", length(ls_files)))
+    }
   }else tiles <- 1:length(ls_files)
 
   #build virtual raster for MODIS if there are multiple files
@@ -234,9 +231,8 @@ process_snowwarp <- function(
   ###CREATE MODIS ID RASTER FOR ENTIRE STUDY AREA###
   ##################################################
 
-  #create modis id blank raster
-  suppressWarnings(invisible(spatial.tools::create_blank_raster(filename = 'mod_id', nlayers = 1,
-                               datatype = 'INT4S', reference_raster = mod_ras)))
+  #create modis id raster
+  raster::writeRaster(mod_ras[[1]], filename = 'mod_id', datatype = 'INT4S', overwrite = T)
 
   #fill with ID values
   mod_id <- raster::raster('mod_id.grd', values = F)
@@ -259,16 +255,27 @@ process_snowwarp <- function(
   ###################################################
 
   ################################
-  ###SET UP PARALLEL PROCESSING###
+  ###LOOP THROUGH LANDSAT FILES###
   ################################
 
-    #register parallel backend
-    cl <- parallel::makeCluster(cpus)
-    doParallel::registerDoParallel(cl)
+  #create temp and output folders
+  if(dir.exists('temp') == F) dir.create('temp')
+  if(dir.exists('output') == F) dir.create('output')
 
-    #loop through landsat files
-    invisible(foreach::foreach(l = tiles) %dopar% {
+  #loop through landsat files
+  for(l in tiles){
 
+    #print processing started message
+    print(stringr::str_c('Processing of Landsat tile ', l, ' started at ', Sys.time(), '.'))
+
+    #create temp dir for tile and years if doesn't already exist
+    if(dir.exists(stringr::str_c('temp/tile_', l)) == F) dir.create(stringr::str_c('temp/tile_', l))
+
+    invisible(sapply(1:length(years), function(i) {
+      if(dir.exists(stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1)) == F) {
+        dir.create(stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1))
+      }
+    }))
 
     #load landsat file
     ls_ras <- raster::brick(ls_files[l])
@@ -280,489 +287,495 @@ process_snowwarp <- function(
     #fill cells with values from modis id and convert to matrix
     ls_id <- raster::resample(mod_id, ls_ras[[1]], method="ngb") %>% raster::as.matrix(.)
 
-    ################################
-    ###ALLOCATE LANDSAT OUTPUT######
-    ################################
-
-    #create output folder
-    if(dir.exists('output') == F) dir.create('output')
-
-    #create blank ("0") output rasters for each year
-    for(i in 1:(length(years))){
-      suppressWarnings(invisible(spatial.tools::create_blank_raster(filename = stringr::str_c('output/snowwarp_', years[i], "_",
-                                                                      years[i] + 1, '_tile_', l, file_ext), datatype = 'INT1U',
-                                                     nlayers = 365, reference_raster=ls_ras)))
-    }
-
-    rm(i)
-
     #create vector of modis rows and columns to process based on overlap with landsat tile
     mod_loc <- sapply(unique(as.vector(ls_id)), function(x) which(mod_id_m == x, arr.ind = T)) %>% t
     colnames(mod_loc) <- c('row', 'col')
 
+    ##################################################
+    ###SET UP PARALLEL PROCESSING OVER MODIS PIXELS###
+    ##################################################
+
+    #register parallel backend
+    cl <- parallel::makeCluster(cpus)
+    doParallel::registerDoParallel(cl)
+
     #loop through each modis pixel
-    for(id in 1:nrow(mod_loc)){
+    invisible(foreach::foreach(id = 1:nrow(mod_loc)) %dopar% {
 
-      #####################
-      ###TIME WARP MODIS###
-      #####################
+      #check if output chunk exists. only process if it does not. only need to check single year
+      if(file.exists(stringr::str_c('temp/tile_', l, '/', years[1], '_', years[1]+1, '/', id, '.tif')) == F) {
 
-      #set initial parameters
-      window <- 30
-      threshold <- 30
-      main_perc <- .5
+        #####################
+        ###TIME WARP MODIS###
+        #####################
 
-      #set row and col to process
-      mod_row <- mod_loc[id,1] %>% as.integer
-      mod_col <- mod_loc[id,2] %>% as.integer
+        #set initial parameters
+        window <- 30
+        threshold <- 30
+        main_perc <- .5
 
-      #define MODIS neighborhood range
-      r_grab <- 2
-      c_grab <- 2
-      r_low <- mod_row - 1
-      r_high <- mod_row + 1
-      c_low <- mod_col - 1
-      c_high <- mod_col + 1
+        #set row and col to process
+        mod_row <- mod_loc[id,1] %>% as.integer
+        mod_col <- mod_loc[id,2] %>% as.integer
 
-      if(r_low < 1) r_low <- 1; r_grab <- 1
-      if(c_low < 1) c_low <- 1; c_grab <- 1
-      if(r_high > NROW(mod_ras)) r_high <- NROW(mod_ras)
-      if(c_high > NCOL(mod_ras)) c_high <- NCOL(mod_ras)
+        #define MODIS neighborhood range
+        r_grab <- 2
+        c_grab <- 2
+        r_low <- mod_row - 1
+        r_high <- mod_row + 1
+        c_low <- mod_col - 1
+        c_high <- mod_col + 1
 
-      #load in MODIS chunk all years
-      mod_p <- raster::getValuesBlock(mod_ras, row = r_low, nrows = (r_high - r_low + 1),
-                              col = c_low, ncols = (c_high - c_low + 1))
+        if(r_low < 1) r_low <- 1; r_grab <- 1
+        if(c_low < 1) c_low <- 1; c_grab <- 1
+        if(r_high > NROW(mod_ras)) r_high <- NROW(mod_ras)
+        if(c_high > NCOL(mod_ras)) c_high <- NCOL(mod_ras)
 
-      #restructure as array
-      mod_p <- array(as.numeric(mod_p), dim = c((c_high - c_low + 1), (r_high - r_low + 1), raster::nbands(mod_ras)))
-
-      #mask bad values
-      mod_p[mod_p >= 200] <- NA
-
-      #change to row/col/layer for processing
-      mod_p <- aperm(mod_p, c(2, 1, 3), resize = T)
-
-      #calculate pixel value based on target pixel and neighborhood (main_perc above dictates %)
-      mod_p <- apply(mod_p, 3, function(x){
-        pix_main <- x[r_grab, c_grab]
-        x[r_grab, c_grab] <- NA
-        pix_neigh <- mean(x, na.rm = T)
-        if(is.na(pix_main) == 0 & is.na(pix_neigh) == 0) (pix_main*main_perc) + (pix_neigh*(1 - main_perc)) else NA}) %>%
-        as.numeric
-
-      #fix MODIS chunk to match full date seq
-      #remove leap year values
-      mod_p <- mod_p[-dates_leap]
-
-      #allocate vector of full date seq
-      mod_pix <- as.numeric(rep(NA, times = ((length(data_yrs) - 1) * 365)))
-
-      #fill with modis values
-      mod_pix[dates_id] <- mod_p
-      rm(mod_p)
-
-      #segment array into matrix by winter year
-      #code needs to screen at beginning that the full data is downloaded and ready to go in order, or else shouldn't process!!!
-      mod_pix <- matrix(mod_pix, nrow = 365, ncol = (length(data_yrs) - 1))
-
-      #set parameters to interpolate daily values after spline
-
-      #set gap size and gaussian level
-      gap_size = 7
-      gauss_lvl = 2
-
-      #find NA values and determine gap sizes
-      vals_na <- is.na(mod_pix)
-      rle_na <- apply(vals_na, 2, function(x){
-        rle_hold <- rle(x)
-        loc <- cumsum(rle_hold$lengths) + 1
-        loc <- append(loc, 1, after = 0)
-        loc <- loc[-length(loc)]
-        len <- rle_hold$lengths[rle_hold$values == T]
-        loc <- loc[rle_hold$values == T]
-        loc <- loc[len > gap_size]
-        len <- len[len > gap_size]
-        matrix(c(loc,len), ncol = 2, dimnames = list(NULL,c("loc", "len")))
-      })
-      rm (vals_na)
-
-      #fit initial spline to MODIS fsca, resulting in daily values
-      #sm.spline chooses the amount of smoothing based on the supplied values
-      #smooth.Pspline lets you choose the spar value... possibly better to have it be constant?
-      #mod_pix <- apply(mod_pix, 2, function(pix) {
-      #  c(predict(sm.spline(x = which(is.na(pix) == 0),
-      #                      y = pix[is.na(pix) == 0]), 1:365))
-      #})
-
-      mod_pix <- apply(mod_pix, 2, function(pix) {
-        c(predict(pspline::smooth.Pspline(
-          x = which(is.na(pix) == 0),
-          y = pix[is.na(pix) == 0],
-          norder = 2,
-          method = 1,
-          spar = (1-0.5) / 0.5     # p given in Matlab csaps
-        ),1:365))
-      })
-
-      #since there are some NA values at beginning of years, refit using another interpolation spline
-      mod_pix <- apply(mod_pix, 2, function(pix) spline(x = 1:365, y = pix, xout = 1:365) %>% .[['y']])
-
-      #use linear interpolation for gaps bigger than gap size
-      #use for loops for now but try to vectorize later!!!
-      #or not since it runs super fast...
-      for(j in 1:ncol(mod_pix)){
-        if(nrow(rle_na[[j]]) > 0){
-          for(i in 1:nrow(rle_na[[j]])){
-            if(rle_na[[j]][, 'loc'][i] == 1) { #if values start at beginning of vector
-              mod_pix[(rle_na[[j]][, 'loc'][i]):(rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i]), j] <-
-                approx(x = c(rle_na[[j]][, 'loc'][i], rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i]),
-                       y = c(mod_pix[rle_na[[j]][, 'loc'][i], j], mod_pix[rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i], j]),
-                       xout = (rle_na[[j]][, 'loc'][i]):(rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i]))$y
-            } else if((rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i]) == nrow(mod_pix) + 1) {
-              #if values end at the end of vector
-              mod_pix[(rle_na[[j]][, 'loc'][i] - 1):(rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i] - 1), j] <-
-                approx(x = c(rle_na[[j]][, 'loc'][i] - 1, rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i] - 1),
-                       y = c(mod_pix[rle_na[[j]][, 'loc'][i] - 1, j], mod_pix[rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i] - 1, j]),
-                       xout = (rle_na[[j]][, 'loc'][i] - 1):(rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i] - 1))$y
-            } else { #if the values are in the middle of vector
-              mod_pix[(rle_na[[j]][, 'loc'][i] - 1):(rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i]), j] <-
-                approx(x = c(rle_na[[j]][, 'loc'][i] - 1, rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i]),
-                       y = c(mod_pix[rle_na[[j]][, 'loc'][i] - 1, j], mod_pix[rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i], j]),
-                       xout = (rle_na[[j]][, 'loc'][i] - 1):(rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i]))$y
-            }
-          }
-        }
-      }
-
-      #smooth using a gaussian filter
-      if(gauss_lvl != 0){
-        mod_pix <- apply(mod_pix, 2, function(pix) { #window taken from matlab default filter size for imgaussfilt
-          smoothie::kernel2dsmooth(matrix(pix), kernel.type = 'gauss', nx = 365, ny = 1, sigma = gauss_lvl) %>%
-            scales::rescale(., to = c(min(pix), max(pix)))
-        })
-      }
-
-      #round, set values > 100 to 100, values < 0 to 0
-      mod_pix <- mod_pix %>% round
-      mod_pix[mod_pix > 100] <- 100
-      mod_pix[mod_pix < 0] <- 0
-
-      #apply dynamic time warping algorithm
-      #the output is warp paths for every processing year
-      #the value of the warp paths is where each index DOY gets warped to
-
-      #create index of which years are target years
-      target_id <- which(data_yrs %in% years)
-
-      #generate warp paths, applied over target_id
-      warp_paths <- sapply(target_id, function(target) {
-
-        #vector of query years not including target
-        query_id <- seq_along(mod_pix[1,])
-
-        #apply dtw over query years for each target year
-        sapply(query_id, function(query) {
-
-          #if query_id is target, return DOY 1:365 since no warp path
-          if(query == target) {1:365} else{
-
-            #run dtw
-            d <- dtw::dtw(mod_pix[,query], mod_pix[,target], window.type = dtw::sakoeChibaWindow,
-                     window.size = window)
-
-            #simplify warping function to get warp_paths
-            #when a single DOY from query year warps to multiple target
-            #year DOYs, take mean target DOY
-            sapply(1:365, function(query_doy) {
-              target_doy <- d$index2[d$index1 == query_doy] %>% mean %>% round
-
-              #remove warp values if difference between target and query values is
-              #greater than threshold
-              if(abs(mod_pix[target_doy, target] - mod_pix[query_doy, query]) > threshold){
-                target_doy <- NA
-              }
-
-              #return target_doy value
-              target_doy
-            })
-          }
-        })
-      }, simplify = "array")
-
-      ###########################
-      ###APPLY WARP TO LANDSAT###
-      ###########################
-
-      #find landsat pixels the correspond to MODIS pixel warped
-      #the pixels will be a rectangle since MODIS and LS in same projection
-      #this means we can process all pixels enclosed in the min/max row/col vals
-      ls_mask <- which(ls_id == mod_id[mod_row, mod_col], arr.ind = T)
-
-      #only run the warp processing if the mask sum is greater then zero
-      #which should be always given the extents are the same
-      #but just to be sure
-      if(sum(ls_mask) > 0){
-
-        #load in landsat chunk all years
-        ls_p <- raster::getValuesBlock(ls_ras, row = min(ls_mask[, 1]), nrows = (max(ls_mask[, 1]) - min(ls_mask[, 1]) + 1),
-                               col = min(ls_mask[, 2]), ncols = (max(ls_mask[, 2]) - min(ls_mask[, 2]) + 1))
+        #load in MODIS chunk all years
+        mod_p <- raster::getValuesBlock(mod_ras, row = r_low, nrows = (r_high - r_low + 1),
+                                        col = c_low, ncols = (c_high - c_low + 1))
 
         #restructure as array
-        ls_p <- array(as.numeric(ls_p), dim = c((max(ls_mask[, 2]) - min(ls_mask[, 2]) + 1),
-                                                (max(ls_mask[, 1]) - min(ls_mask[, 1]) + 1),
-                                                raster::nbands(ls_ras)))
+        mod_p <- array(as.numeric(mod_p), dim = c((c_high - c_low + 1), (r_high - r_low + 1), raster::nbands(mod_ras)))
 
-        #change to row/column/layer for processing
-        ls_p <- aperm(ls_p, c(2, 1, 3), resize = T)
+        #mask bad values
+        mod_p[mod_p >= 200] <- NA
 
-        #set no data values
-        ls_p[ls_p == 255] <- NA
+        #change to row/col/layer for processing
+        mod_p <- aperm(mod_p, c(2, 1, 3), resize = T)
 
-        #extract date values from landsat bands
-        ls_dates <- stringr::str_extract(ls_bands, '[:digit:]{8}')
-        ls_dates <- lubridate::ymd(ls_dates)
+        #calculate pixel value based on target pixel and neighborhood (main_perc above dictates %)
+        mod_p <- apply(mod_p, 3, function(x){
+          pix_main <- x[r_grab, c_grab]
+          x[r_grab, c_grab] <- NA
+          pix_neigh <- mean(x, na.rm = T)
+          if(is.na(pix_main) == 0 & is.na(pix_neigh) == 0) (pix_main*main_perc) + (pix_neigh*(1 - main_perc)) else NA}) %>%
+          as.numeric
 
-        #create vector of landsat DOY
-        ls_doy <- lubridate::yday(ls_dates)
+        #fix MODIS chunk to match full date seq
+        #remove leap year values
+        mod_p <- mod_p[-dates_leap]
 
-        #subtract 1 in leap years to keep DOY uniform
-        ls_doy[lubridate::leap_year(ls_dates) == T & ls_doy > 59] <- ls_doy[lubridate::leap_year(ls_dates) == T & ls_doy > 59] - 1
+        #allocate vector of full date seq
+        mod_pix <- as.numeric(rep(NA, times = ((length(data_yrs) - 1) * 365)))
 
-        #subtract 212 and add 365 from negative DOY to convert
-        #to winter DOY (WDOY)
-        ls_doy <- ls_doy - 212
-        ls_doy[ls_doy < 1] <- ls_doy[ls_doy < 1] + 365
+        #fill with modis values
+        mod_pix[dates_id] <- mod_p
+        rm(mod_p)
 
-        #create vector of landsat year
-        ls_yr <- lubridate::year(ls_dates)
+        #segment array into matrix by winter year
+        #code needs to screen at beginning that the full data is downloaded and ready to go in order, or else shouldn't process!!!
+        mod_pix <- matrix(mod_pix, nrow = 365, ncol = (length(data_yrs) - 1))
 
-        #change year to match WDOY -- so if winter starts in year 2000
-        #Jan-July 2001 should read as year 2000 to facilitate warping
-        #since winter years strattle calendar years
-        ls_yr[lubridate::month(ls_dates) <8] <- ls_yr[lubridate::month(ls_dates) < 8] - 1
+        #set parameters to interpolate daily values after spline
 
-        #apply warp paths to each target year of data
-        #output is landsat time-series for each target year
-        ls_out <- sapply(1:dim(warp_paths)[3], function(x) {
+        #set gap size and gaussian level
+        gap_size = 7
+        gauss_lvl = 2
 
-          #convert warp paths into vector for each year
-          warp <- warp_paths[,,x] %>% as.vector
+        #find NA values and determine gap sizes
+        vals_na <- is.na(mod_pix)
+        rle_na <- apply(vals_na, 2, function(x){
+          rle_hold <- rle(x)
+          loc <- cumsum(rle_hold$lengths) + 1
+          loc <- append(loc, 1, after = 0)
+          loc <- loc[-length(loc)]
+          len <- rle_hold$lengths[rle_hold$values == T]
+          loc <- loc[rle_hold$values == T]
+          loc <- loc[len > gap_size]
+          len <- len[len > gap_size]
+          matrix(c(loc,len), ncol = 2, dimnames = list(NULL,c("loc", "len")))
+        })
+        rm (vals_na)
 
-          #create index of the landsat data we have
-          #in the same shape as the warp paths
-          warp_id <- (365*(ls_yr - min(data_yrs))) + ls_doy
+        #fit initial spline to MODIS fsca, resulting in daily values
+        #sm.spline chooses the amount of smoothing based on the supplied values
+        #smooth.Pspline lets you choose the spar value... possibly better to have it be constant?
+        #mod_pix <- apply(mod_pix, 2, function(pix) {
+        #  c(predict(sm.spline(x = which(is.na(pix) == 0),
+        #                      y = pix[is.na(pix) == 0]), 1:365))
+        #})
 
-          #only keep the warp values we have data for
-          warp_doy <- warp[warp_id]
+        #only apply to pixels if there are enough modis values to run the function
+        if(sum(apply(mod_pix, 2, function(x) sum(is.na(x))) < 320) != 0) {
 
-          #create id vector length of ls_dates
-          #and remove values where we don't have landsat
-          #data to use for warp
-          band_id <- 1:length(ls_dates) %>% .[is.na(warp_doy) == F]
+          mod_pix <- apply(mod_pix, 2, function(pix) {
+            c(predict(pspline::smooth.Pspline(
+              x = which(is.na(pix) == 0),
+              y = pix[is.na(pix) == 0],
+              norder = 2,
+              method = 1,
+              spar = (1-0.5) / 0.5     # p given in Matlab csaps
+            ),1:365))
+          })
 
-          #remove warp_doy values with NA
-          warp_doy <- warp_doy[is.na(warp_doy) == F]
+          #since there are some NA values at beginning of years, refit using another interpolation spline
+          mod_pix <- apply(mod_pix, 2, function(pix) spline(x = 1:365, y = pix, xout = 1:365) %>% .[['y']])
 
-          #create vector of unique days to warp to
-          unique_doy <- unique(warp_doy)
+          #use linear interpolation for gaps bigger than gap size
+          #use for loops for now but try to vectorize later!!!
+          #or not since it runs super fast...
+          for(j in 1:ncol(mod_pix)){
+            if(nrow(rle_na[[j]]) > 0){
+              for(i in 1:nrow(rle_na[[j]])){
+                if(rle_na[[j]][, 'loc'][i] == 1) { #if values start at beginning of vector
+                  mod_pix[(rle_na[[j]][, 'loc'][i]):(rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i]), j] <-
+                    approx(x = c(rle_na[[j]][, 'loc'][i], rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i]),
+                           y = c(mod_pix[rle_na[[j]][, 'loc'][i], j], mod_pix[rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i], j]),
+                           xout = (rle_na[[j]][, 'loc'][i]):(rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i]))$y
+                } else if((rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i]) == nrow(mod_pix) + 1) {
+                  #if values end at the end of vector
+                  mod_pix[(rle_na[[j]][, 'loc'][i] - 1):(rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i] - 1), j] <-
+                    approx(x = c(rle_na[[j]][, 'loc'][i] - 1, rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i] - 1),
+                           y = c(mod_pix[rle_na[[j]][, 'loc'][i] - 1, j], mod_pix[rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i] - 1, j]),
+                           xout = (rle_na[[j]][, 'loc'][i] - 1):(rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i] - 1))$y
+                } else { #if the values are in the middle of vector
+                  mod_pix[(rle_na[[j]][, 'loc'][i] - 1):(rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i]), j] <-
+                    approx(x = c(rle_na[[j]][, 'loc'][i] - 1, rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i]),
+                           y = c(mod_pix[rle_na[[j]][, 'loc'][i] - 1, j], mod_pix[rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i], j]),
+                           xout = (rle_na[[j]][, 'loc'][i] - 1):(rle_na[[j]][, 'loc'][i] + rle_na[[j]][, 'len'][i]))$y
+                }
+              }
+            }
+          }
 
-          #create array of warped landsat data
-          #take mean if more than one landsat band warps
-          #to a given DOY in target year
-          snow <- sapply(unique_doy, function(doy){
-            apply(ls_p[,,band_id[warp_doy == doy]], c(1, 2), FUN = function(x) mean(x, na.rm = T)) %>% round
-          }, simplify = "array")
+          #smooth using a gaussian filter
+          if(gauss_lvl != 0){
+            mod_pix <- apply(mod_pix, 2, function(pix) { #window taken from matlab default filter size for imgaussfilt
+              smoothie::kernel2dsmooth(matrix(pix), kernel.type = 'gauss', nx = 365, ny = 1, sigma = gauss_lvl) %>%
+                scales::rescale(., to = c(min(pix), max(pix)))
+            })
+          }
 
-          #change NaN to NA
-          snow[is.nan(snow)] <- NA
+          #round, set values > 100 to 100, values < 0 to 0
+          mod_pix <- mod_pix %>% round
+          mod_pix[mod_pix > 100] <- 100
+          mod_pix[mod_pix < 0] <- 0
 
-          #create output snow matrix for each year
-          out <- array(as.integer(NA), dim = c(dim(ls_p)[1], dim(ls_p)[2], 365))
+          #apply dynamic time warping algorithm
+          #the output is warp paths for every processing year
+          #the value of the warp paths is where each index DOY gets warped to
 
-          #fill ls_out with snow values from warp
-          out[,,unique_doy] <- snow
+          #create index of which years are target years
+          target_id <- which(data_yrs %in% years)
 
-          #send matrix out
-          out
+          #generate warp paths, applied over target_id
+          warp_paths <- sapply(target_id, function(target) {
 
-        }, simplify = "array")
+            #vector of query years not including target
+            query_id <- seq_along(mod_pix[1,])
 
-        #apply spline to output landsat pixels, resulting in daily values
-        ls_out <- sapply(1:dim(ls_out)[4], function(yr){ #apply over all years
-          sapply(1:dim(ls_out)[2], function(c){ #apply over all columns
-            sapply(1:dim(ls_out)[1], function(r){ #apply over all rows
+            #apply dtw over query years for each target year
+            sapply(query_id, function(query) {
 
-              #load in single pixel time series
-              pix <- ls_out[r, c, , yr]
+              #if query_id is target, return DOY 1:365 since no warp path
+              if(query == target) {1:365} else{
 
-              #only apply spline if have more than 45 data points
-              if(sum(is.na(pix)) < 320){
+                #run dtw
+                d <- dtw::dtw(mod_pix[,query], mod_pix[,target], window.type = dtw::sakoeChibaWindow,
+                              window.size = window)
 
-                #find NA values and determine gap sizes
-                vals_na <- is.na(pix)
-                rle_hold <- rle(vals_na)
-                loc <- cumsum(rle_hold$lengths) + 1
-                loc <- append(loc, 1, after = 0)
-                loc <- loc[-length(loc)]
-                len <- rle_hold$lengths[rle_hold$values == T]
-                loc <- loc[rle_hold$values == T]
-                loc <- loc[len > gap_size]
-                len <- len[len > gap_size]
-                rle_na <- matrix(c(loc,len), ncol = 2, dimnames = list(NULL,c("loc", "len")))
+                #simplify warping function to get warp_paths
+                #when a single DOY from query year warps to multiple target
+                #year DOYs, take mean target DOY
+                sapply(1:365, function(query_doy) {
+                  target_doy <- d$index2[d$index1 == query_doy] %>% mean %>% round
 
-                #apply initial spline
-                pix <- c(predict(pspline::smooth.Pspline(
-                  x = which(is.na(pix) == 0),
-                  y = pix[is.na(pix) == 0],
-                  norder = 2,
-                  method = 1,
-                  spar = (1-0.5) / 0.5     # p given in Matlab csaps
-                ),1:365))
-
-                #since there are some NA values at beginning of years, refit using another interpolation spline
-                pix <- spline(x = 1:365, y = pix, xout = 1:365) %>% .[['y']]
-
-                #use linear interpolation for gaps bigger than gap size
-                #use for loops for now but try to vectorize later!!!
-                #or not since it runs super fast...
-                if(nrow(rle_na) > 0){
-                  for(i in 1:nrow(rle_na)){
-                    if(rle_na[, 'loc'][i] == 1) { #if values start at beginning of vector
-                      pix[(rle_na[, 'loc'][i]):(rle_na[, 'loc'][i] + rle_na[, 'len'][i])] <-
-                        approx(x = c(rle_na[, 'loc'][i], rle_na[, 'loc'][i] + rle_na[, 'len'][i]),
-                               y = c(pix[rle_na[, 'loc'][i]], pix[rle_na[, 'loc'][i] + rle_na[, 'len'][i]]),
-                               xout = (rle_na[, 'loc'][i]):(rle_na[, 'loc'][i] + rle_na[, 'len'][i]))$y
-                    } else if((rle_na[, 'loc'][i] + rle_na[, 'len'][i]) == length(pix) + 1) {
-                      #if values end at the end of vector
-                      pix[(rle_na[, 'loc'][i] - 1):(rle_na[, 'loc'][i] + rle_na[, 'len'][i] - 1)] <-
-                        approx(x = c(rle_na[, 'loc'][i] - 1, rle_na[, 'loc'][i] + rle_na[, 'len'][i] - 1),
-                               y = c(pix[rle_na[, 'loc'][i] - 1], pix[rle_na[, 'loc'][i] + rle_na[, 'len'][i] - 1]),
-                               xout = (rle_na[, 'loc'][i] - 1):(rle_na[, 'loc'][i] + rle_na[, 'len'][i] - 1))$y
-                    } else { #if the values are in the middle of vector
-                      pix[(rle_na[, 'loc'][i] - 1):(rle_na[, 'loc'][i] + rle_na[, 'len'][i])] <-
-                        approx(x = c(rle_na[, 'loc'][i] - 1, rle_na[, 'loc'][i] + rle_na[, 'len'][i]),
-                               y = c(pix[rle_na[, 'loc'][i] - 1], pix[rle_na[, 'loc'][i] + rle_na[, 'len'][i]]),
-                               xout = (rle_na[, 'loc'][i] - 1):(rle_na[, 'loc'][i] + rle_na[, 'len'][i]))$y
-                    }
+                  #remove warp values if difference between target and query values is
+                  #greater than threshold
+                  if(abs(mod_pix[target_doy, target] - mod_pix[query_doy, query]) > threshold){
+                    target_doy <- NA
                   }
-                }
 
-                #smooth using a gaussian filter
-                if(gauss_lvl != 0){
-                  pix <- smoothie::kernel2dsmooth(matrix(pix), kernel.type = 'gauss', nx = 365, ny = 1, sigma = gauss_lvl) %>%
-                    scales::rescale(., to = c(min(pix), max(pix)))
-                }
-
-                #round, set values > 100 to 100, values < 0 to 0
-                pix <- pix %>% round
-                pix[pix > 100] <- 100
-                pix[pix < 0] <- 0
-
-                #send pix out
-                pix
-
-              }else {
-                #if not enough data points set values to no data
-                pix[] <- 255
-
-                #send out pix
-                pix
+                  #return target_doy value
+                  target_doy
+                })
               }
             })
-          }, simplify = 'array')
-        }, simplify = 'array')
+          }, simplify = "array")
 
-        #change ls_out back to array dimensions we want
-        ls_out <- aperm(ls_out, c(2, 3, 1, 4))
+          ###########################
+          ###APPLY WARP TO LANDSAT###
+          ###########################
 
-        #just in case extra NA values set them to no data (shouldn't be any NA)
-        ls_out[is.na(ls_out)] <- 255
+          #find landsat pixels the correspond to MODIS pixel warped
+          #the pixels will be a rectangle since MODIS and LS in same projection
+          #this means we can process all pixels enclosed in the min/max row/col vals
+          ls_mask <- which(ls_id == mod_id[mod_row, mod_col], arr.ind = T)
 
-      } else{
-        ls_out <- array(data = 255, dim = c(length(min(ls_mask[, 1]):max(ls_mask[, 1])),
-                                            length(min(ls_mask[, 2]):max(ls_mask[, 2])),
-                                            365, length(years)))
-      }
+          #only run the warp processing if the mask sum is greater then zero
+          #which should be always given the extents are the same
+          #but just to be sure
+          if(sum(ls_mask) > 0){
 
-      #change data back to columns first
-      ls_out <- aperm(ls_out, c(2, 1, 3, 4))
+            #load in landsat chunk all years
+            ls_p <- raster::getValuesBlock(ls_ras, row = min(ls_mask[, 1]), nrows = (max(ls_mask[, 1]) - min(ls_mask[, 1]) + 1),
+                                           col = min(ls_mask[, 2]), ncols = (max(ls_mask[, 2]) - min(ls_mask[, 2]) + 1))
 
-      #change to integer
-      storage.mode(ls_out) <- 'integer'
+            #restructure as array
+            ls_p <- array(as.numeric(ls_p), dim = c((max(ls_mask[, 2]) - min(ls_mask[, 2]) + 1),
+                                                    (max(ls_mask[, 1]) - min(ls_mask[, 1]) + 1),
+                                                    raster::nbands(ls_ras)))
 
-      #write out data in small chunks. will merge after processing
-      suppressWarnings(invisible(sapply(1:dim(ls_out)[4], function(i){
-        spatial.tools::binary_image_write(filename = stringr::str_c('output/snowwarp_', years[i], "_",
-                                            years[i] + 1, '_tile_', l, file_ext, '.gri'),
-                           mode = mmap::uint8(), image_dims = c(ncol(ls_ras), nrow(ls_ras), 365),
-                           data = ls_out[,,,i],
-                           data_position = list(min(ls_mask[, 2]):max(ls_mask[, 2]),
-                                                min(ls_mask[, 1]):max(ls_mask[, 1]),
-                                                1:365))
-      })))
-    }
+            #change to row/column/layer for processing
+            ls_p <- aperm(ls_p, c(2, 1, 3), resize = T)
 
-    ###########################
-    ###SMOOTH LANDSAT OUTPUT###
-    ###########################
+            #set no data values
+            ls_p[ls_p == 255] <- NA
 
-    #run each file separately
-    for(i in 1:length(years)){
+            #extract date values from landsat bands
+            ls_dates <- stringr::str_extract(ls_bands, '[:digit:]{8}')
+            ls_dates <- lubridate::ymd(ls_dates)
 
-      #process each band
-      for(b in 1:365){
+            #create vector of landsat DOY
+            ls_doy <- lubridate::yday(ls_dates)
 
-        #load in raster band
-        r <- raster::raster(stringr::str_c('output/snowwarp_', years[i], "_",
-                          years[i] + 1, '_tile_', l, file_ext, '.grd'), band = b)
+            #subtract 1 in leap years to keep DOY uniform
+            ls_doy[lubridate::leap_year(ls_dates) == T & ls_doy > 59] <- ls_doy[lubridate::leap_year(ls_dates) == T & ls_doy > 59] - 1
 
-        #set no data value
-        r[r == 255] <- NA
+            #subtract 212 and add 365 from negative DOY to convert
+            #to winter DOY (WDOY)
+            ls_doy <- ls_doy - 212
+            ls_doy[ls_doy < 1] <- ls_doy[ls_doy < 1] + 365
 
-        #smooth with 3x3 low-pass filter
-        r <- raster::focal(r, w=matrix(1,3,3), fun = function(x) mean(x, na.rm = T), pad = T, padValue = NA)
+            #create vector of landsat year
+            ls_yr <- lubridate::year(ls_dates)
 
-        #convert to array
-        r <- as.array(round(r))
+            #change year to match WDOY -- so if winter starts in year 2000
+            #Jan-July 2001 should read as year 2000 to facilitate warping
+            #since winter years strattle calendar years
+            ls_yr[lubridate::month(ls_dates) <8] <- ls_yr[lubridate::month(ls_dates) < 8] - 1
 
-        #change to correct output dimensions
-        r <- aperm(r, c(2, 1, 3))
+            #apply warp paths to each target year of data
+            #output is landsat time-series for each target year
+            ls_out <- sapply(1:dim(warp_paths)[3], function(x) {
 
-        #change NA values back to 255
-        r[is.na(r)] <- 255
+              #convert warp paths into vector for each year
+              warp <- warp_paths[,,x] %>% as.vector
 
-        #change to integer
-        storage.mode(r) <- 'integer'
+              #create index of the landsat data we have
+              #in the same shape as the warp paths
+              warp_id <- (365*(ls_yr - min(data_yrs))) + ls_doy
 
-        #write back to file
-        spatial.tools::binary_image_write(filename = stringr::str_c('output/snowwarp_', years[i], "_",
-                                            years[i] + 1, '_tile_', l, file_ext, '.gri'),
-                           mode = mmap::uint8(), image_dims = c(ncol(r), nrow(r), 365),
-                           data = r[,, 1],
-                           data_position = list(1:ncol(r),
-                                                1:nrow(r),
-                                                b))
+              #only keep the warp values we have data for
+              warp_doy <- warp[warp_id]
 
-        #clean up
-        removeTmpFiles(h=0.00000001)
-      }
+              #create id vector length of ls_dates
+              #and remove values where we don't have landsat
+              #data to use for warp
+              band_id <- 1:length(ls_dates) %>% .[is.na(warp_doy) == F]
 
-      #rewrite tile to disk so it is usable in other software
-      raster::writeRaster(raster::brick(stringr::str_c('output/snowwarp_', years[i], "_",
-                        years[i] + 1, '_tile_', l, file_ext, '.grd')),
-                  filename = stringr::str_c('output/snowwarp_', years[i], "_",
-                                   years[i] + 1, '_tile_', l, file_ext, '.tif'),
-                  datatype = 'INT1U', overwrite = T, format = 'GTiff')
+              #remove warp_doy values with NA
+              warp_doy <- warp_doy[is.na(warp_doy) == F]
 
-      #remove .grd file
-      file.remove(stringr::str_c('output/snowwarp_', years[i], "_",
-                        years[i] + 1, '_tile_', l, file_ext, '.grd'),
-                  stringr::str_c('output/snowwarp_', years[i], "_",
-                        years[i] + 1, '_tile_', l, file_ext, '.gri'))
-    }
-  }) #end of loop over landsat tiles
+              #create vector of unique days to warp to
+              unique_doy <- unique(warp_doy)
+
+              #create array of warped landsat data
+              #take mean if more than one landsat band warps
+              #to a given DOY in target year
+              snow <- sapply(unique_doy, function(doy){
+                apply(ls_p[,,band_id[warp_doy == doy]], c(1, 2), FUN = function(x) mean(x, na.rm = T)) %>% round
+              }, simplify = "array")
+
+              #change NaN to NA
+              snow[is.nan(snow)] <- NA
+
+              #create output snow matrix for each year
+              out <- array(as.integer(NA), dim = c(dim(ls_p)[1], dim(ls_p)[2], 365))
+
+              #fill ls_out with snow values from warp
+              out[,,unique_doy] <- snow
+
+              #send matrix out
+              out
+
+            }, simplify = "array")
+
+            #apply spline to output landsat pixels, resulting in daily values
+            ls_out <- sapply(1:dim(ls_out)[4], function(yr){ #apply over all years
+              sapply(1:dim(ls_out)[2], function(c){ #apply over all columns
+                sapply(1:dim(ls_out)[1], function(r){ #apply over all rows
+
+                  #load in single pixel time series
+                  pix <- ls_out[r, c, , yr]
+
+                  #only apply spline if have more than 45 data points
+                  if(sum(is.na(pix)) < 320){
+
+                    #find NA values and determine gap sizes
+                    vals_na <- is.na(pix)
+                    rle_hold <- rle(vals_na)
+                    loc <- cumsum(rle_hold$lengths) + 1
+                    loc <- append(loc, 1, after = 0)
+                    loc <- loc[-length(loc)]
+                    len <- rle_hold$lengths[rle_hold$values == T]
+                    loc <- loc[rle_hold$values == T]
+                    loc <- loc[len > gap_size]
+                    len <- len[len > gap_size]
+                    rle_na <- matrix(c(loc,len), ncol = 2, dimnames = list(NULL,c("loc", "len")))
+
+                    #apply initial spline
+                    pix <- c(predict(pspline::smooth.Pspline(
+                      x = which(is.na(pix) == 0),
+                      y = pix[is.na(pix) == 0],
+                      norder = 2,
+                      method = 1,
+                      spar = (1-0.5) / 0.5     # p given in Matlab csaps
+                    ),1:365))
+
+                    #since there are some NA values at beginning of years, refit using another interpolation spline
+                    pix <- spline(x = 1:365, y = pix, xout = 1:365) %>% .[['y']]
+
+                    #use linear interpolation for gaps bigger than gap size
+                    #use for loops for now but try to vectorize later!!!
+                    #or not since it runs super fast...
+                    if(nrow(rle_na) > 0){
+                      for(i in 1:nrow(rle_na)){
+                        if(rle_na[, 'loc'][i] == 1) { #if values start at beginning of vector
+                          pix[(rle_na[, 'loc'][i]):(rle_na[, 'loc'][i] + rle_na[, 'len'][i])] <-
+                            approx(x = c(rle_na[, 'loc'][i], rle_na[, 'loc'][i] + rle_na[, 'len'][i]),
+                                   y = c(pix[rle_na[, 'loc'][i]], pix[rle_na[, 'loc'][i] + rle_na[, 'len'][i]]),
+                                   xout = (rle_na[, 'loc'][i]):(rle_na[, 'loc'][i] + rle_na[, 'len'][i]))$y
+                        } else if((rle_na[, 'loc'][i] + rle_na[, 'len'][i]) == length(pix) + 1) {
+                          #if values end at the end of vector
+                          pix[(rle_na[, 'loc'][i] - 1):(rle_na[, 'loc'][i] + rle_na[, 'len'][i] - 1)] <-
+                            approx(x = c(rle_na[, 'loc'][i] - 1, rle_na[, 'loc'][i] + rle_na[, 'len'][i] - 1),
+                                   y = c(pix[rle_na[, 'loc'][i] - 1], pix[rle_na[, 'loc'][i] + rle_na[, 'len'][i] - 1]),
+                                   xout = (rle_na[, 'loc'][i] - 1):(rle_na[, 'loc'][i] + rle_na[, 'len'][i] - 1))$y
+                        } else { #if the values are in the middle of vector
+                          pix[(rle_na[, 'loc'][i] - 1):(rle_na[, 'loc'][i] + rle_na[, 'len'][i])] <-
+                            approx(x = c(rle_na[, 'loc'][i] - 1, rle_na[, 'loc'][i] + rle_na[, 'len'][i]),
+                                   y = c(pix[rle_na[, 'loc'][i] - 1], pix[rle_na[, 'loc'][i] + rle_na[, 'len'][i]]),
+                                   xout = (rle_na[, 'loc'][i] - 1):(rle_na[, 'loc'][i] + rle_na[, 'len'][i]))$y
+                        }
+                      }
+                    }
+
+                    #smooth using a gaussian filter
+                    if(gauss_lvl != 0){
+                      pix <- smoothie::kernel2dsmooth(matrix(pix), kernel.type = 'gauss', nx = 365, ny = 1, sigma = gauss_lvl) %>%
+                        scales::rescale(., to = c(min(pix), max(pix)))
+                    }
+
+                    #round, set values > 100 to 100, values < 0 to 0
+                    pix <- pix %>% round
+                    pix[pix > 100] <- 100
+                    pix[pix < 0] <- 0
+
+                    #send pix out
+                    pix
+
+                  }else {
+                    #if not enough data points set values to no data
+                    pix[] <- 255
+
+                    #send out pix
+                    pix
+                  }
+                })
+              }, simplify = 'array')
+            }, simplify = 'array')
+
+            #change ls_out back to array dimensions we want
+            ls_out <- aperm(ls_out, c(2, 3, 1, 4))
+
+            #just in case extra NA values set them to no data (shouldn't be any NA)
+            ls_out[is.na(ls_out)] <- 255
+
+          } else{
+            ls_out <- array(data = 255, dim = c(length(min(ls_mask[, 1]):max(ls_mask[, 1])),
+                                                length(min(ls_mask[, 2]):max(ls_mask[, 2])),
+                                                365, length(years)))
+          }
+
+          #change data back to columns first
+          #ls_out <- aperm(ls_out, c(2, 1, 3, 4))
+
+          #change to integer
+          #storage.mode(ls_out) <- 'integer'
+
+          #write out data in small chunks. will merge after processing
+          invisible(sapply(1:dim(ls_out)[4], function(i){
+
+            #create output raster template
+            ls <- raster::crop(ls_ras[[1]], raster::extent(ls_ras, min(ls_mask[, 1]), max(ls_mask[, 1]),
+                                                           min(ls_mask[, 2]), max(ls_mask[, 2])))
+
+            #fill output raster with values
+            ls <- raster::brick(ls_out[,,,i], xmn = raster::extent(ls)[1], xmx = raster::extent(ls)[2],
+                                ymn = raster::extent(ls)[3], ymx = raster::extent(ls)[4], crs = raster::crs(ls))
+
+            #write chunk to disk
+            raster::writeRaster(ls, filename = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/', id, '.tif'), format = 'GTiff',
+                                datatype = 'INT1U', NAflag = 255, overwrite = T, options = rgdal::setCPLConfigOption("GDAL_PAM_ENABLED", "FALSE"))
+
+            rm(ls)
+
+          }))
+        } else {#end of if function to ensure enough MODIS pixels. if not output NA
+
+          #define landsat mask
+          ls_mask <- which(ls_id == mod_id[mod_row, mod_col], arr.ind = T)
+
+          #write out data in small chunks. will merge after processing
+          invisible(sapply(1:length(years), function(i){
+
+            #create output raster template
+            ls <- raster::crop(ls_ras[[1]], raster::extent(ls_ras, min(ls_mask[, 1]), max(ls_mask[, 1]),
+                                                           min(ls_mask[, 2]), max(ls_mask[, 2])))
+
+            #fill output raster with values
+            ls <- raster::brick(nrows = NROW(ls), ncols = NCOL(ls), xmn = raster::extent(ls)[1], xmx = raster::extent(ls)[2],
+                                ymn = raster::extent(ls)[3], ymx = raster::extent(ls)[4], nl = 365, crs = raster::crs(ls))
+            ls[] <- NA
+
+            #write chunk to disk
+            raster::writeRaster(ls, filename = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/', id, '.tif'), format = 'GTiff',
+                                datatype = 'INT1U', NAflag = 255, overwrite = T, options = rgdal::setCPLConfigOption("GDAL_PAM_ENABLED", "FALSE"))
+
+            rm(ls)
+
+          }))
+
+        } #end of function that only outputs NA if not enough modis values
+
+      } #end of check to see if file chunk exists
+
+
+    }) #end of loop through each MODIS pixel
 
     #stop parallel cluster
     parallel::stopCluster(cl)
+
+    ######################################
+    ###MOSAIC AND SMOOTH LANDSAT OUTPUT###
+    ######################################
+
+    #run each year separately
+    for(i in 1:length(years)){
+
+      #load file list of raster chunks
+      mos_f <- Sys.glob(paths = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/*.tif'), dirmark = T)
+
+      #build vrt
+      invisible(gdalUtils::gdalbuildvrt(gdalfile = mos_f, output.vrt = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/vrt.vrt'),
+                              srcnodata = '255', vrtnodata = '255', NUM_THREADS = cpus, overwrite = T))
+
+      #run smoothing function
+      invisible(system(stringr::str_c(list.files(path = stringr::str_c(otb_dir, '/bin'), pattern = 'otbcli_Smoothing', include.dirs = T, full.names = T),
+                            ' -in ', folder, '/temp/tile_', l, '/', years[i], '_', years[i]+1, '/vrt.vrt ',
+                            '-out ', folder, '/output/snowwarp_', years[i], "_", years[i] + 1, '_tile_', l, '.tif uint8 ',
+                            '-type mean -type.mean.radius 1 -ram ', max_ram)))
+
+    }
+
+    #print processing complete message
+    print(stringr::str_c('Processing of Landsat tile ', l, ' finished at ', Sys.time(), '.'))
+
+    #delete all files from temp folder
+    #invisible(unlink(stringr::str_c('temp/tile_', l), recursive = T))
+
+  } #end of loop over landsat tiles
 
 } #end of function

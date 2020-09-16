@@ -233,12 +233,12 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <div id="intro" class="section level2">
 <h2>Intro</h2>
-<p>Welcome to the snowwarp package! This package was created to provide open-source access to SnowWarp fractional snow covered area (fSCA) data and accompanying annual statistics. For more information on the SnowWarp algorithm and it’s methods see <a href="https://www.sciencedirect.com/science/article/abs/pii/S0034425718303626">Berman et al. (2018)</a>. For methods of key annual snow statistics please see <a href="https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0215243">Berman et al. (2019)</a>.</p>
+<p>Welcome to the snowwarp package! This package was created to provide open-source access to SnowWarp fractional snow covered area (fSCA) data and accompanying annual statistics. SnowWarp is a new data fusion approach to create a daily time-series of 30 m snow cover observations. It was created to meet the data needs of applied researchers, who desire a snow cover dataset with a high enough spatial and temporal resolution to match the scale of their work. The product is derived by leveaging daily MODIS snow cover data, which captures the temporal dynamics of snow cover, and Dynamic Time Warping (DTW), which is used to re-order historical Landsat observations to account for inter-annual variability. For more information on the SnowWarp algorithm and it’s methods see <a href="https://www.sciencedirect.com/science/article/abs/pii/S0034425718303626">Berman et al. (2018)</a>. For methods of key annual snow statistics and a novel application of SnowWarp please see <a href="https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0215243">Berman et al. (2019)</a>.</p>
 <p>Please note the following when using SnowWarp:</p>
 <ol style="list-style-type: decimal">
 <li>fSCA data from MODIS and Landsat is now used as the input into the SnowWarp algorithm. fSCA is calculated using a linear regression on NDSI following the methods of <a href="https://www.sciencedirect.com/science/article/pii/S0034425719306388">Aalstad et al. (2020)</a>. The regression formula is fSCA = (1.45) * NDSI -0.01. This was not the orginal input data used in Berman et al. (2018) and this data has not been validated! Please use at your own discretion. That being said, the new fSCA approach should help to deal with the systematic underestimation of fSCA that was found in Landsat TMSCAG data.</li>
 <li>Data is pre-processed in Google Earth Engine (GEE) in WGS84 projection. Output files are GeoTiff (.tif) and ~30 meters resolution.</li>
-<li>Data is currently available from August 1, 2000 until July 31, 2019. New data will be added at the end of each annual ‘winter’ year (i.e. late summer).</li>
+<li>Data is currently available from August 1, 2000 until July 31, 2020. New data will be added at the end of each annual ‘winter’ year (i.e. late summer).</li>
 <li>Use of SnowWarp data is free but must be cited. Please cite:</li>
 </ol>
 <ol style="list-style-type: lower-roman">
@@ -246,12 +246,18 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <li>Berman, E.E., Francini, S., Coops, N.C. (2020). snowwarp. R package.</li>
 </ol>
 <p>The following instructions should be followed to ensure proper use of the snowwarp package. The general workflow is:</p>
-<ol style="list-style-type: decimal">
+<ol start="0" style="list-style-type: decimal">
+<li>Download the snowwarp R package and Orfeo Toolbox.</li>
 <li>Organize and pre-process data on Google Earth Engine.</li>
 <li>Download pre-processed data.</li>
 <li>Process SnowWarp daily fSCA.</li>
 <li>Extract key SnowWarp annual statistics.</li>
 </ol>
+</div>
+<div id="donwload-the-snowwarp-r-package-and-orfeo-toolbox." class="section level2">
+<h2>0. Donwload the snowwarp R package and Orfeo Toolbox.</h2>
+<p>The snowwarp R package is available on Github in <a href="https://github.com/bermane/snowwarp">this repository</a>. To download and install in R, use the following code: devtools::install_github(“bermane/snowwarp”). You need to first install the devtools package if you don’t have it already.</p>
+<p>The code also requires the Orfeo Toolbox, which can be <a href="https://www.orfeo-toolbox.org/">downloaded here</a>. Note the installation directory as it is needed later on to run the package in R.</p>
 </div>
 <div id="organize-and-pre-process-data-on-google-earth-engine" class="section level2">
 <h2>1. Organize and pre-process data on Google Earth Engine</h2>
@@ -268,7 +274,11 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 </div>
 <div id="process-snowwarp-daily-fsca" class="section level2">
 <h2>3. Process SnowWarp daily fSCA</h2>
-<p>This is main part of the SnowWarp algorithm and also the most time consuming. Depending on your processing power, read/write speed, and allocation of cpus for parallel processing, this function can run from anywhere from a few days to a couple weeks. Before getting started, run the get_snowwarp_tiles function (run “?get_snowwarp_tiles” for details) function, which will return the number of Landsat tiles you need to process. When you run the process_snowwarp function (run “process_snowwarp” for details), you can specify the tile numbers you want to process in each iteration. It is always better to process all the years of data you want at the same time, so if you have space or processing constraints, start by restricting the number of tiles processed in each iteration. SnowWarp outputs daily fSCA and each raster contains 365 bands corresponding to August 1 - July 31. For example, if you run years = c(2000, 2004), you will get two rasters with data from August 1, 2000 - July 31, 2001 and August 1, 2004 - July 31, 2005. Leap years are not accounted for (365 days every year). The output will be located inside “folder/output”, where “folder” is the directory with the pre-processed imagery from GEE.</p>
+<p>This is main part of the SnowWarp algorithm and also the most time consuming. Depending on your processing power, read/write speed, and allocation of cpus for parallel processing, this function can run from anywhere from a few days to a couple weeks. Before getting started, run the get_snowwarp_tiles function (run “?get_snowwarp_tiles” for details) function, which will return the number of Landsat tiles you need to process. When you run the process_snowwarp function (run “process_snowwarp” for details), you can specify the tile numbers you want to process. The code processes data in parallel on a single tile at a time, so the time it takes to run the first tile multiplied by the number of tiles will give a good estimate of total processing time. It is always better to process all the years of data you want at the same time, so if you have space constraints, start by restricting the number of tiles processed in each iteration.</p>
+<p>Snowwarp processes a lot of data and it is important to optimize the resources available to the function. When setting the number of cpus, we recommend using at least half of the cpus on your machine. More if you are able! For example, note that often an “8” core machine means “16” cpus. Therefore this value should be &gt;= 8. This value will have a huge impact on the time it takes the function to run. Consider trying higher cpu values and testing how well your computer handles it when trying the first tile. The same goes for the maximum ram (in MB) available to the smoothing function from Orfeo Toolbox (variable “max_ram”). It defaults to 256 but it is strongly advised to increase this number to at least half your computer’s RAM. Consider using the same proportion of RAM as porportion of CPUS/threads. This value is less important than number of cpus.</p>
+<p>The other thing you can do to speed up processing is increase the ram available to the “raster” package in R using the “maxmemory” option. See <a href="https://www.gis-blog.com/increasing-the-speed-of-raster-processing-with-r-part-13/">this blog</a> for an example. You need to change this option in R before running the snowwarp function, and each time you open R.</p>
+<p>SnowWarp outputs daily fSCA and each raster contains 365 bands corresponding to August 1 - July 31. For example, if you run years = c(2000, 2004), you will get two rasters with data from August 1, 2000 - July 31, 2001 and August 1, 2004 - July 31, 2005. Leap years are not accounted for (365 days every year). The output will be located inside “folder/output”, where “folder” is the directory with the pre-processed imagery from GEE. Temporary files generated will be located in “folder/temp”, but should delete themselves as you continue to process. Note that the function does have some built it checks for what has already been processed, so if your computer shuts down while in the middle of processing a tile, the code will resume that tile when you start it again. Note if a tile is totally finished processing (i.e. you have the outputs in the “folder/output” location), the code will start processing the tile from the beginning if you indicate to process that tile number. The function will print a message when it starts and completes each tile, along with the time of message.</p>
+<p>**Please note that there is a small bug that sometimes returns values greater than 100. After processing snowwarp you should set all values greater than 100 to NA.</p>
 </div>
 <div id="extract-key-annual-statistics" class="section level2">
 <h2>4. Extract key annual statistics</h2>

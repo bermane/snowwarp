@@ -4,38 +4,33 @@
 \alias{process_snowwarp}
 \title{Process SnowWarp Data}
 \usage{
-process_snowwarp(
-  folder,
-  years,
-  cpus,
-  file_ext = "",
-  tiles = NULL,
-  maxmemory = 1e+10
-)
+process_snowwarp(folder, years, cpus, otb_dir, max_ram = 256, tiles = NULL)
 }
 \arguments{
-\item{folder}{The main directory where the Google Earth Engine files are located on your computer}
+\item{folder}{The main directory where the Google Earth Engine files are located on your computer.}
 
-\item{years}{The years of data you want processed. Must be numeric and between 2000-2018. Snowwarp runs on winter years (Aug 1st - July 31st)
+\item{years}{The years of data you want processed. Must be numeric and between 2000-2019. Snowwarp runs on winter years (Aug 1st - July 31st)
 instead of calendar years, so years = 2005 means August 1, 2005 - July 31, 2006, etc.
 It is better to run all the years you want at once, and less tiles.}
 
-\item{cpus}{The number of cpus to use for parallel processing. This should not be greater than the number of tiles since each tile is
-processed in parallel.}
+\item{cpus}{The number of cpus to use for parallel processing. We recommend using at least half of the cpus on your machine. More if
+you are able. For example, note that often an "8" core machine means "16" cpus. Therefore this value should be >= 8.}
 
-\item{file_ext}{File name descriptor to add to end of output files. No descriptor by default.}
+\item{otb_dir}{The main directory where the Orfeo Toolbox is located on your computer.}
+
+\item{max_ram}{The maximum ram (in MB) available to the smoothing function from Orfeo Toolbox. Defaults to 256 and can only be increased.
+It is strongly advised to increase this number to at least half your computer's RAM. Consider using the same proportion of RAM as porportion of CPUS/threads.}
 
 \item{tiles}{Option to process a certain number of tiles. Run get_snowwarp_tiles first to get the total number of tiles.
-It is better to run the function over a smaller number of tiles and all the years desired. Think about ROM and number of processors available.
-Defaults to processing all tiles.}
-
-\item{maxmemory}{The amount of memory allocated for the raster package. Defaults to 1e+10, which is slightly more than default.}
+It is better to run the function over a smaller number of tiles and all the years desired. SNOWWARP processes one tile at a time
+so you can run a test on the first tile. Defaults to processing all tiles.}
 }
 \value{
 The process_snowwarp function returns .tif rasters with daily values of fractional snow covered area. Each file
 contains values from August 1st - July 31st of the subsequent year. These daily values can be used
 in of themselves, or can be further input into the extract_snowwarp_stats function to calculate annual statistics.
-These files are written to 'folder/output'.
+These files are written to 'folder/output'. \strong{Please note that there is a small bug that sometimes returns values greater than 100.
+After processing snowwarp you should set all values greater than 100 to NA}
 }
 \description{
 This function processes SnowWarp using imagery downloaded from Google Earth Engine. Please refer to instruction manual
@@ -47,14 +42,16 @@ For Mac:
 process_snowwarp(folder = '/Users/MyUser/Documents/GEE_snow_download',
 years = 2004:2008,
 cpus = 8,
-file_ext = 'studyarea1',
+otb_dir = '/Users/MyUser/Users/OTB-7.1.0-Darwin64'
+max_ram = 8000
 tiles = 1:8)
 
 For Windows:
 process_snowwarp(folder = 'D:/GEE_snow_download',
 years = 2004:2008,
 cpus = 8,
-file_ext = 'studyarea1',
+oct_dir = 'C:/OTB-7.1.0-Win64'
+max_ram = 8000
 tiles = 1:8)
 
 }

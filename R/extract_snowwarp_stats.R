@@ -8,9 +8,7 @@
 #' inside this directory with the data from the process_snowwarp function.
 #' @param cpus The number of cpus to use for parallel processing. This should not be greater than the number of tiles since each tile is
 #' processed in parallel.
-#' @param file_ext File name descriptor that you added to the process_snowwarp function. No descriptor by default.
 #' @param tiles Tiles that you have already processed using the process_snowwarp function.
-#' @param maxmemory The amount of memory allocated for the raster package. Defaults to 1e+10, which is slightly more than default.
 #' @return The extract_snowwarp_stats function returns .tif rasters with annual snow statistics (for each winter year). Each file
 #' contains three bands. Band 1 is the date of snow accumulation, Band 2 is the date of snow melt, and Band 3 is the
 #' number of days with snow in the winter year. These files are written to 'folder/output'.
@@ -19,13 +17,11 @@
 #' For Mac:
 #' extract_snowwarp_stats(folder = '/Users/MyUser/Documents/GEE_snow_download',
 #' cpus = 8,
-#' file_ext = 'studyarea1',
 #' tiles = 1:8)
 #'
 #' For Windows:
 #' extract_snowwarp_stats(folder = 'D:/GEE_snow_download',
 #' cpus = 8,
-#' file_ext = 'studyarea1',
 #' tiles = 1:8)
 #'
 #' @export
@@ -33,19 +29,12 @@
 extract_snowwarp_stats <- function(
   folder, #main directory where data is located
   cpus, #number of cpus to use for parallel processing
-  file_ext = '', #file extension added to snowwarp output and to add to stats output
-  tiles = NULL, #option to process a certain number of tiles. make sure already ran process_snowwarp on these tiles.
-  maxmemory = 1e+10 #maximum memory used by raster package
+  tiles = NULL #option to process a certain number of tiles. make sure already ran process_snowwarp on these tiles.
 ){
 
   ##################################
   ###CHECK FOR PACKAGES INSTALLED###
   ##################################
-
-  #check for packages and return error if missing
-  packages <- c('tidyverse', 'raster', 'doParallel', 'foreach', 'zoo', 'ArgumentCheck')
-  new_packages <- packages[!(packages %in% installed.packages()[,"Package"])]
-  if(length(new_packages)) stop(paste0("\n Package ", new_packages," needed for this function to work. Please install it."))
 
   #define local %operators%
   `%dopar%` <- foreach::`%dopar%`
@@ -87,32 +76,6 @@ extract_snowwarp_stats <- function(
     )
   }
 
-  #add an error if file_ext is not character and is longer than 1
-  if(is.character(file_ext) == F) {
-    ArgumentCheck::addError(
-      msg = "'file_ext' is not a character vector",
-      argcheck = check
-    )
-  } else if(length(file_ext) != 1) {
-    ArgumentCheck::addError(
-      msg = "'file_ext' does not contain a single value",
-      argcheck = check
-    )
-  }
-
-  #add an error if maxmemory is not numeric and is longer than 1
-  if(is.numeric(maxmemory) == F) {
-    ArgumentCheck::addError(
-      msg = "'maxmemory' is not a numeric vector",
-      argcheck = check
-    )
-  } else if(length(maxmemory) != 1) {
-    ArgumentCheck::addError(
-      msg = "'maxmemory' does not contain a single value",
-      argcheck = check
-    )
-  }
-
   #Return errors and warnings (if any)
   ArgumentCheck::finishArgCheck(check)
 
@@ -120,18 +83,11 @@ extract_snowwarp_stats <- function(
   ###INITIAL SETUP###
   ###################
 
-  #set raster options to use a bit more memory
-  raster::rasterOptions(maxmemory = maxmemory)
-
   #set wd
   setwd(folder)
 
-  #set output file_ext with underscore
-  if(file_ext != '') file_ext = stringr::str_c('_', file_ext)
-
   #read in snowwarp data
-  snow_files <- Sys.glob(file.path('output', stringr::str_c('snowwarp_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_*',
-                                                   file_ext, '.tif')))
+  snow_files <- Sys.glob(file.path('output', stringr::str_c('snowwarp_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9]_*.tif')))
 
   #check that there are actually snow files to extract stats from
   if(length(snow_files) == 0) stop(stringr::str_c('No SnowWarp files found. Please verify the folder, file extention, ',
@@ -159,23 +115,25 @@ extract_snowwarp_stats <- function(
   #define number of interations
   num_iter = 100
 
-  #register parallel backend
-  cl <- parallel::makeCluster(cpus)
-  doParallel::registerDoParallel(cl)
-
   #loop through landsat files
-  invisible(foreach::foreach(l = 1:length(snow_files)) %dopar% {
+  for(l in 1:length(snow_files)) {
+
+    #create output file base
+    out_f <- stringr::str_replace(snow_files[l], 'snowwarp', 'snowwarp_stats') %>%
+      stringr::str_replace(., 'output', 'temp')
 
     #load snowwarp brick
     ras <- raster::brick(snow_files[l])
 
-    #allocate output array
-    stats <- array(as.integer(NA), dim = c(nrow(ras), ncol(ras), 3))
-
     #find segment of rows to run
     row_seg <- split(1:nrow(ras), factor(sort(rank(1:nrow(ras))%%100)))
 
-    for(iter in 1:num_iter){
+    #register parallel backend
+    cl <- parallel::makeCluster(cpus)
+    doParallel::registerDoParallel(cl)
+
+    #process in parallel over row iters
+    invisible(foreach::foreach(iter = 1:num_iter) %dopar% {
 
       #load in snowwarp chunk
       snow <- raster::getValuesBlock(ras, row = min(row_seg[[iter]]), nrows = length(row_seg[[iter]]),
@@ -222,26 +180,47 @@ extract_snowwarp_stats <- function(
       doy_fall <- aperm(doy_fall, c(2, 1, 3))
       doy_spring <- aperm(doy_spring, c(2, 1, 3))
 
-      #add to stats
-      stats[row_seg[[iter]],,1] <- doy_fall
-      stats[row_seg[[iter]],,2] <- doy_spring
-      stats[row_seg[[iter]],,3] <- snow_days
+      #put output layers into single array
+      ls_out <- abind::abind(doy_fall, doy_spring, snow_days)
 
-    }
+      #create output raster template
+      ls <- raster::crop(ras[[1:3]], raster::extent(ras, min(row_seg[[iter]]), max(row_seg[[iter]]),
+                                                     1, ncol(ras)))
 
-    #create output raster
-    out <- raster::brick(ras, nl = 3)
+      #fill output raster with values
+      ls <- raster::brick(ls_out, xmn = raster::extent(ls)[1], xmx = raster::extent(ls)[2],
+                          ymn = raster::extent(ls)[3], ymx = raster::extent(ls)[4], crs = raster::crs(ls))
 
-    #fill with stats values
-    out <- raster::setValues(out, aperm(stats, c(2,1,3)))
+      #create specific output file
+      out_f_row <- stringr::str_replace(out_f, '.tif', stringr::str_c('_r', min(row_seg[[iter]]), '_r', max(row_seg[[iter]]), '.tif'))
 
-    #write raster
-    raster::writeRaster(out, filename = str_replace(snow_files[l], 'snowwarp', 'snowwarp_stats'),
-                format = 'GTiff', datatype = 'INT2U', overwrite = T, NAflag = 65534)
+      #write chunk to disk
+      raster::writeRaster(ls, filename = out_f_row, format = 'GTiff',
+                          datatype = 'INT2U', NAflag = 65534, overwrite = T,
+                          options = rgdal::setCPLConfigOption("GDAL_PAM_ENABLED", "FALSE"))
 
-  })
+      }) #end of parallel loop over iter
 
-  #stop parallel cluster
-  parallel::stopCluster(cl)
+    #stop parallel cluster
+    parallel::stopCluster(cl)
+
+    ###########################
+    ###MOSAIC LANDSAT OUTPUT###
+    ###########################
+
+    #load file list of raster chunks
+    mos_f <- Sys.glob(stringr::str_replace(out_f, '.tif', '_*.tif'))
+
+    #mosaic rasters
+    invisible(gdalUtils::mosaic_rasters(gdalfile = mos_f, dst_dataset = stringr::str_replace(out_f, 'temp', 'output'),
+                              NUM_THREADS = cpus))
+
+    #print processing complete message
+    print(stringr::str_c('Processing of SnowWarp stats for ', snow_files[l], ' finished at ', Sys.time(), '.'))
+
+    #delete all files from temp folder
+    do.call(file.remove, list(list.files('temp', full.names = TRUE)))
+
+} #end of loop over landsat files
 
 } #end of function
