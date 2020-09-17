@@ -1,10 +1,9 @@
 ---
 title: "Start SnowWarp!"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{start_snowwarp}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+output: 
+  md_document: 
+    variant: markdown_github
+
 ---
 
 ```{r, include = FALSE}
@@ -35,7 +34,7 @@ The following instructions should be followed to ensure proper use of the snowwa
 3. Process SnowWarp daily fSCA.
 4. Extract key SnowWarp annual statistics.
 
-## 0. Donwload the snowwarp R package and Orfeo Toolbox.
+## 0. Download the snowwarp R package and Orfeo Toolbox.
 
 The snowwarp R package is available on Github in [this repository](https://github.com/bermane/snowwarp). To download and install in R, use the following code: devtools::install_github("bermane/snowwarp"). You need to first install the devtools package if you don't have it already.
 
