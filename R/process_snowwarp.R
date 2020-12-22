@@ -766,11 +766,12 @@ process_snowwarp <- function(
                               srcnodata = '255', vrtnodata = '255', NUM_THREADS = cpus, overwrite = T))
 
       #run smoothing function
-      invisible(system(stringr::str_c(list.files(path = stringr::str_c(otb_dir, '/bin'), pattern = 'otbcli_Smoothing', include.dirs = T, full.names = T),
-                            ' -in ', folder, '/temp/tile_', l, '/', years[i], '_', years[i]+1, '/vrt.vrt ',
-                            '-out ', folder, '/output/snowwarp_', years[i], "_", years[i] + 1, '_tile_', l, '.tif uint8 ',
-                            '-type mean -type.mean.radius 1 -ram ', max_ram)))
-
+      invisible(system2(command = stringr::str_c(list.files(path = stringr::str_c(otb_dir, '/bin'), pattern = 'otbcli_Smoothing', include.dirs = T, full.names = T)),
+                        args = c(stringr::str_c('-in ', folder, '/temp/tile_', l, '/', years[i], '_', years[i]+1, '/vrt.vrt'),
+                                 stringr::str_c('-out ', folder, '/output/snowwarp_', years[i], "_", years[i] + 1, '_tile_', l, '.tif uint8'),
+                                 '-type mean',
+                                 '-type.mean.radius 1',
+                                 stringr::str_c('-ram ', max_ram))))
     }
 
     #print processing complete message
