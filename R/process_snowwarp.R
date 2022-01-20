@@ -99,9 +99,9 @@ process_snowwarp <- function(
       msg = "'years' is not a numeric vector",
       argcheck = check
     )
-  } else if(length(years[!(years %in% 2000:2019)])) {
+  } else if(length(years[!(years %in% 2000:2020)])) {
     ArgumentCheck::addError(
-      msg = "'years' does not only contain values from 2000-2019",
+      msg = "'years' does not only contain values from 2000-2020",
       argcheck = check
     )
   }
