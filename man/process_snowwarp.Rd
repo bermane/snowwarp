@@ -2,7 +2,7 @@
 % Please edit documentation in R/process_snowwarp.R
 \name{process_snowwarp}
 \alias{process_snowwarp}
-\title{Process SnowWarp Data}
+\title{last modified: Jan 13, 2022}
 \usage{
 process_snowwarp(folder, years, cpus, otb_dir, max_ram = 256, tiles = NULL)
 }
@@ -56,6 +56,7 @@ cpus = 8,
 oct_dir = 'C:/OTB-7.1.0-Win64'
 max_ram = 8000
 tiles = 1:8)
+
 
 }
 \seealso{

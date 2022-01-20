@@ -1,4 +1,6 @@
-#' Process SnowWarp Data
+# Process SnowWarp Data
+#'
+#' last modified: Jan 13, 2022
 #'
 #' This function processes SnowWarp using imagery downloaded from Google Earth Engine. Please refer to instruction manual
 #' \url{https://htmlpreview.github.io/?https://github.com/bermane/snowwarp/blob/master/start_snowwarp.html},
@@ -41,6 +43,7 @@
 #' oct_dir = 'C:/OTB-7.1.0-Win64'
 #' max_ram = 8000
 #' tiles = 1:8)
+#'
 #'
 #' @export
 
@@ -755,24 +758,86 @@ process_snowwarp <- function(
     ###MOSAIC AND SMOOTH LANDSAT OUTPUT###
     ######################################
 
-    #run each year separately
+    # to avoid error with too many temp files being joined together at once, mosaic temp files in smaller
+    # groups first, then mosaic smaller, intermediate .vrt files together
     for(i in 1:length(years)){
 
-      #load file list of raster chunks
-      mos_f <- Sys.glob(paths = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/*.tif'), dirmark = T)
+      # get dimensions of boundary area
+      dimension <- dim(mod_ras)
+      ncol <- dimension[2]
+      nrow <- dimension[1]
+      ntiles <- length(grep(list.files(path = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/') ,pattern ='tif'),
+                            pattern = '_', invert=TRUE))
 
-      #build vrt
-      invisible(gdalUtils::gdalbuildvrt(gdalfile = mos_f, output.vrt = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/vrt.vrt'),
-                              srcnodata = '255', vrtnodata = '255', NUM_THREADS = cpus, overwrite = T))
+      # set initial value
+      n <- 1
+      # determine number of temp files per .vrt (value < 500)
+      while (round(ncol/2^n)*nrow > 500) {
+        n <- n + 1}
+
+      vrt_size <- nrow*round(ncol/2^n)
+      last_vrt <- ntiles%%vrt_size
+
+      # number of temp files in each sub .vrt
+      if(last_vrt == 0) {
+        num_vrt <- ntiles%/%vrt_size
+      } else {
+        num_vrt <- ntiles%/%vrt_size+1
+      }
+
+      num_cols <- vrt_size/nrow
+      num_cols_last <- last_vrt/nrow
+
+      mos_f <- matrix(, nrow=num_vrt,ncol=vrt_size)
+
+
+      # make intermediate .vrt's that will be in  ./temp directory
+      for (n in 1:num_vrt){
+        if (last_vrt != 0){
+          if (n<num_vrt){
+            mos_f[n, ] <- Sys.glob(paths = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/',((1:vrt_size)+vrt_size*(n-1)),'.tif'), dirmark = T)
+            invisible(gdalUtils::gdalbuildvrt(gdalfile = mos_f[n, ], output.vrt = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/vrt_', n, '.vrt'),
+                                              srcnodata = '255', vrtnodata = '255', NUM_THREADS = cpus, overwrite = T))
+            invisible(gdalUtils::gdal_translate(src_dataset =stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/vrt_', n, '.vrt'), dst_dataset = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/tif_', n, '.tif') ))
+          }
+          else if (n==num_vrt){
+            mos_f[n,1:last_vrt] <- Sys.glob(paths = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/',((1:last_vrt)+vrt_size*(n-1)),'.tif'), dirmark = T)
+            invisible(gdalUtils::gdalbuildvrt(gdalfile = mos_f[n,1:last_vrt], output.vrt = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/vrt_', n, '.vrt'),
+                                              srcnodata = '255', vrtnodata = '255', NUM_THREADS = cpus, overwrite = T))
+            invisible(gdalUtils::gdal_translate(src_dataset =stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/vrt_', n, '.vrt'), dst_dataset = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/tif_', n, '.tif') ))
+          }
+        }
+        else if (last_vrt == 0){
+          mos_f[n, ] <- Sys.glob(paths = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/',((1:vrt_size)+vrt_size*(n-1)),'.tif'), dirmark = T)
+          invisible(gdalUtils::gdalbuildvrt(gdalfile = mos_f[n, ], output.vrt = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/vrt_', n, '.vrt'),
+                                            srcnodata = '255', vrtnodata = '255', NUM_THREADS = cpus, overwrite = T))
+          invisible(gdalUtils::gdal_translate(src_dataset =stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/vrt_', n, '.vrt'), dst_dataset = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/tif_', n, '.tif') ))
+        }
+
+      }
+
+      # load intermediate vrt files
+      mos_vrt <- Sys.glob(paths = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/tif_', 1:num_vrt, '.tif'), dirmark = T)
+
+      # build large, final vrt by mosaicking intermediate vrt files
+      invisible(gdalUtils::gdalbuildvrt(gdalfile = mos_vrt, output.vrt = stringr::str_c('temp/tile_', l, '/', years[i], '_', years[i]+1, '/vrt_final.vrt'),
+                                        srcnodata = '255', vrtnodata = '255', NUM_THREADS = cpus, overwrite = T))
 
       #run smoothing function
       invisible(system2(command = stringr::str_c(list.files(path = stringr::str_c(otb_dir, '/bin'), pattern = 'otbcli_Smoothing', include.dirs = T, full.names = T)),
-                        args = c(stringr::str_c('-in ', folder, '/temp/tile_', l, '/', years[i], '_', years[i]+1, '/vrt.vrt'),
+                        args = c(stringr::str_c('-in ', folder, '/temp/tile_', l, '/', years[i], '_', years[i]+1, '/vrt_final.vrt'),
                                  stringr::str_c('-out ', folder, '/output/snowwarp_', years[i], "_", years[i] + 1, '_tile_', l, '.tif uint8'),
                                  '-type mean',
                                  '-type.mean.radius 1',
                                  stringr::str_c('-ram ', max_ram))))
+
+      # clean up the values that are over 100
+      all_files <- raster::brick(stringr::str_c(folder, '/output/snowwarp_', years[i], "_", years[i] + 1, '_tile_', l, '.tif'))
+      all_files [all_files > 100] <- NA
+      raster::writeRaster(all_files, stringr::str_c( folder, '/output/snowwarp_', years[i], "_", years[i] + 1, '_tile_', l, '.tif'), datatype = 'INT1U',
+                          format = 'GTiff', overwrite = T, options = rgdal::setCPLConfigOption("GDAL_PAM_ENABLED", "FALSE"))
     }
+
 
     #print processing complete message
     print(stringr::str_c('Processing of Landsat tile ', l, ' finished at ', Sys.time(), '.'))
@@ -781,6 +846,8 @@ process_snowwarp <- function(
     #for now make users manually delete files to ensure things are working
     #invisible(unlink(stringr::str_c('temp/tile_', l), recursive = T))
 
+
   } #end of loop over landsat tiles
 
 } #end of function
+
