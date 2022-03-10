@@ -1,6 +1,6 @@
 Package: snowwarp
 Title: Implement SnowWarp Algorithm
-Version: 0.0.0.9300
+Version: 0.0.0.9400
 Authors@R: 
     c(person(given = "Ethan E.",
            family = "Berman",
@@ -26,14 +26,15 @@ Imports:
         gdalUtils,
         raster,
         doParallel,
-        ArgumentCheck,
         foreach,
         pspline,
         smoothie,
         dtw,
         parallel,
         zoo,
-	    googledrive
+        googledrive,
+        snowfall,
+        data.table
 Suggests: 
     knitr,
     rmarkdown

@@ -23,15 +23,14 @@ get_snowwarp_tiles <- function(folder) { #main directory where data is located
   #add an error if the folder directory doesn't exist
   if(dir.exists(folder) == F) stop("'folder' does not point to a valid directory")
 
-  #set wd
-  setwd(folder)
-
   #load file names
-  ls_files <- list.files(pattern = 'FscaLandsat', full.names = T)
+  ls_files <- list.files(folder, pattern = 'FscaLandsat', full.names = T)
 
   #return error if there are no files, otherwise print number of tiles
   if(length(ls_files) == 0) {
     stop("No tiles from Google Earth Engine were found. Please verify directory or re-download.")
   } else print(paste0("There are ", length(ls_files), " tiles."))
+  
+  return(length(ls_files))
 
 } #end of function
