@@ -32,52 +32,9 @@ extract_snowwarp_stats <- function(
   tiles = NULL #option to process a certain number of tiles. make sure already ran process_snowwarp on these tiles.
 ){
 
-  ##################################
-  ###CHECK FOR PACKAGES INSTALLED###
-  ##################################
-
   #define local %operators%
   `%dopar%` <- foreach::`%dopar%`
   `%>%` <- stringr::`%>%`
-
-  ###########################
-  ###CHECK INPUT VARIABLES###
-  ###########################
-
-  #add check argument
-  check <- ArgumentCheck::newArgCheck()
-
-  #add an error if the folder is not a character vector
-  if(is.character(folder) == F) {
-    ArgumentCheck::addError(
-      msg = "'folder' is not a character vector",
-      argcheck = check
-    )
-  }
-
-  #add an error if the folder directory doesn't exist
-  if(dir.exists(folder) == F) {
-    ArgumentCheck::addError(
-      msg = "'folder' does not point to a valid directory",
-      argcheck = check
-    )
-  }
-
-  #add an error if cpus is not numeric and is longer than 1
-  if(is.numeric(cpus) == F) {
-    ArgumentCheck::addError(
-      msg = "'cpus' is not a numeric vector",
-      argcheck = check
-    )
-  } else if(length(cpus) != 1) {
-    ArgumentCheck::addError(
-      msg = "'cpus' does not contain a single value",
-      argcheck = check
-    )
-  }
-
-  #Return errors and warnings (if any)
-  ArgumentCheck::finishArgCheck(check)
 
   ###################
   ###INITIAL SETUP###
@@ -127,6 +84,12 @@ extract_snowwarp_stats <- function(
 
     #find segment of rows to run
     row_seg <- split(1:nrow(ras), factor(sort(rank(1:nrow(ras))%%100)))
+
+    ## clean parallel computing
+    unregister_dopar <- function() {
+      env <- foreach:::.foreachGlobals
+      rm(list=ls(name=env), pos=env)
+    }
 
     #register parallel backend
     cl <- parallel::makeCluster(cpus)
@@ -203,6 +166,7 @@ extract_snowwarp_stats <- function(
 
     #stop parallel cluster
     parallel::stopCluster(cl)
+    unregister_dopar()
 
     ###########################
     ###MOSAIC LANDSAT OUTPUT###

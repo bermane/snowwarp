@@ -8,8 +8,10 @@ Please note the following when using SnowWarp:
 2. Data is pre-processed in Google Earth Engine (GEE) in WGS84 projection. Output files are GeoTiff (.tif) and ~30 meters resolution.
 3. Data is currently available from August 1, 2000 until July 31, 2021. New data will be added at the end of each annual 'winter' year (i.e. late summer).
 3. Use of SnowWarp data is free but must be cited. Please cite:
-  i) [Berman et al. (2018)](https://www.sciencedirect.com/science/article/abs/pii/S0034425718303626)
-  ii) Berman, E.E., Francini, S., Coops, N.C. (2020). snowwarp. R package.
+
+  i) Gaia Vaglio Laurin, Saverio Francini, Daniele Penna, Giulia Zuecco, Gherardo Chirici, Ethan Berman, Nicholas Coops, Giulio Castelli, Elena Bresci, Federico Preti, Riccardo Valentini. SnowWarp: an open science and open data tool for daily monitoring of snow dynamics. Environmental modelling and software. In review.   
+
+  ii) [Berman et al. (2018)](https://www.sciencedirect.com/science/article/abs/pii/S0034425718303626)
 
 The following instructions should be followed to ensure proper use of the snowwarp package. The general workflow is:
 
@@ -28,7 +30,7 @@ The code also requires the Orfeo Toolbox, which can be [downloaded here](https:/
 ## 1. Organize and pre-process data on Google Earth Engine
 
 1. Create and/or sign-in to your Google Earth Engine Account
-2. [Open the SnowWarpPackage API by following this link](https://code.earthengine.google.com/?accept_repo=users/sfrancini/SnowWarpPackage). Opening the link will create a script on your GEE account that can be used to pre-process data. The script will appear in a "Reader" repository in your "Scripts" panel.
+2. Open the SnowWarpPackage API by using [this link](https://code.earthengine.google.com/?accept_repo=users/sfrancini/SnowWarpPackage). Opening the link will create a script on your GEE account that can be used to pre-process data. The script will appear in a "Reader" repository in your "Scripts" panel.
 3.  Click on the "SnowWarp-API" script and click "Run". This should open the SnowWarp API and allow you to specify a shapefile (study area) and Google Drive output folder.
 4. Follow the instructions to upload a shapefile of your study area and download the data to Google Drive. Please note that a free account only has 15 GB of space on Google Drive. If your study area is too large (i.e. when you try to pre-process the data on GEE you get an error), try cutting the area into smaller parts and running separately. Once you download the imagery to your hard drive, you can delete the data from Google Drive and run the next study area chunk.
 
@@ -58,9 +60,15 @@ The SnowWarp dataset contains daily values at ~30 m spatial resolution -- This i
 
 Many other statistics can be calculated from SnowWarp, but these should get you started!
 
+## 5. SnowWarp workflow example 
+
+For the sake of the user, we have prepared a "run.R" [code](https://github.com/bermane/snowwarp/inst/test/run.R)
+Once installed the SnowWarp package, you'll find the run.R code in a "test" folder.
+run.R can be executed for testing the package with example data we provide (the data that is downloaded by default using our GEE user interface) or you can replace parameters for specifying you own input data and obtaining outputs over your specific area of interest.
+
 ## That's it!
 
-Thanks for your interest in these data! We are very excited to share SnowWarp with the research community and make it available to data users for many applications. This is a new package and deals with a large amount of data and processing, and we would definitely appreciate your feedback about it's usability and functionality. There is lots of room for this code to be optimized for easier use and faster processing of large areas, and we look forward to adding on to it in the future. Any effort to help improve functionality is welcome!
+Thanks for your interest in these data! We are very excited to share SnowWarp with the research community and make it available to data users for many applications. This is a new package and deals with a large amount of data and processing, and we would definitely appreciate your feedback about it's usability and functionality. Any effort to help improve functionality is welcome!
 
 Best of luck,
 

@@ -9,7 +9,7 @@ process_snowwarp(folder, years, cpus, otb_dir, max_ram = 256, tiles = NULL)
 \arguments{
 \item{folder}{The main directory where the Google Earth Engine files are located on your computer.}
 
-\item{years}{The years of data you want processed. Must be numeric and between 2000-2019. Snowwarp runs on winter years (Aug 1st - July 31st)
+\item{years}{The years of data you want processed. Must be numeric and between 2000-2020. Snowwarp runs on winter years (Aug 1st - July 31st)
 instead of calendar years, so years = 2005 means August 1, 2005 - July 31, 2006, etc.
 It is better to run all the years you want at once, and less tiles.}
 

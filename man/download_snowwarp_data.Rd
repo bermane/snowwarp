@@ -6,7 +6,7 @@
 \usage{
 download_snowwarp_data(
   mail,
-  link,
+  link = "https://drive.google.com/drive/u/1/folders/1nWauSi-6dGkdn9htUodSszskbi1F9NHz",
   folder = file.path(getwd(), "snowwarp_data"),
   overwrite = T
 )
@@ -14,8 +14,7 @@ download_snowwarp_data(
 \arguments{
 \item{mail}{Your Google Drive account email}
 
-\item{link}{The shareable link to the Google Drive folder that contains the SnowWarp input imagery. (1) Right click on the Google Drive folder.
-(2) Obtain shareable link.}
+\item{link}{The URL to the Google Drive folder that contains the SnowWarp input imagery.}
 
 \item{folder}{The folder where you want the imagery to be downloaded to. This will be the same folder you use for the other
 SnowWarp functions.}
@@ -31,15 +30,10 @@ and follow the steps to acquire the necessary imagery. You may have issues if Go
 your default web browser.
 }
 \examples{
-For Mac:
-download_snowwarp_data(mail = 'myemail at server.com',
-link = 'shareable google drive folder link',
-folder = '/Users/MyUser/Documents/GEE_snow_download')
-
-For Windows:
-process_snowwarp(mail = 'myemail at server.com',
-link = 'shareable google drive folder link',
-folder = 'D:/GEE_snow_download')
+download_snowwarp_data(
+mail = "saverio.francini@unifi.it",
+link = "https://drive.google.com/drive/u/1/folders/1nWauSi-6dGkdn9htUodSszskbi1F9NHz",
+folder = file.path(getwd(), "snowwarp_data"))
 
 }
 \seealso{
