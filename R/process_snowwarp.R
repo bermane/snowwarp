@@ -969,7 +969,7 @@ process_snowwarp <-
                num_cols_last <- last_vrt / nrow
 
                mos_f <-
-                 matrix(, nrow = num_vrt, ncol = vrt_size)
+                 matrix(data = NA, nrow = num_vrt, ncol = vrt_size)
 
 
                # make intermediate .vrt's that will be in  ./temp directory
