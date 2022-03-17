@@ -267,11 +267,22 @@ process_snowwarp <-
              ls_ras <- raster::brick(ls_files[l])
 
              # crop to ensure extent is smaller than MODIS extent
-             ls_ras <- raster::crop(ls_ras, mod_id)
+             ls_ras2 <- raster::crop(ls_ras, mod_id)
 
-             # write out landsat file
-             raster::writeRaster(ls_ras, filename = ls_files[l],
-                                 overwrite = T)
+             # only rewrite file if there was a change to extent
+             if(ls_ras@extent != ls_ras2@extent){
+
+               # remove original raster
+               rm(ls_ras)
+
+               # write out landsat file
+               raster::writeRaster(ls_ras2, filename = ls_files[l],
+                                   overwrite = T)
+
+               # load new raster
+               ls_ras <- ls_ras2
+               rm(ls_ras2)
+             } else {rm(ls_ras2)}
 
              ##################################
              ###BUILD LANDSAT MODIS RELATION###
