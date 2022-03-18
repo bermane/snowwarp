@@ -277,6 +277,7 @@ process_snowwarp <-
 
                # write out landsat file
                raster::writeRaster(ls_ras2, filename = ls_files[l],
+                                   datatype = 'INT1U',
                                    overwrite = T)
 
                # load new raster
