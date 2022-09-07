@@ -9,7 +9,7 @@ calculate_snowwarp_sca(folder, aoi)
 \arguments{
 \item{folder}{The main directory where the Google Earth Engine files are located on your computer (i.e., the same folder you used for process_snowwarp)}
 
-\item{aoi}{The path for an Area Of Interest shapefile}
+\item{aoi}{The shapefile of the an Area Of Interest}
 }
 \value{
 The calculate_snowwarp_sca function returns a csv file that indicates for each day in the time series the percentage of the aoi that is covered by snow
@@ -20,8 +20,7 @@ This function calculates daily snow covered areas over a specific area of intere
 \examples{
 calculate_snowwarp_sca(
 folder = 'snowWarpFolder',
-aoi = 2004:2008,
-outputFolder = 8
+aoi = raster::shapefile("aoi.shp")
 )
 }
 \seealso{

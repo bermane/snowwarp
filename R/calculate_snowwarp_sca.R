@@ -5,14 +5,13 @@
 #' This function calculates daily snow covered areas over a specific area of interest using the \code{\link{process_snowwarp}} outputs
 #'
 #' @param folder The main directory where the Google Earth Engine files are located on your computer (i.e., the same folder you used for process_snowwarp)
-#' @param aoi The path for an Area Of Interest shapefile
+#' @param aoi The shapefile of the an Area Of Interest
 #' @return The calculate_snowwarp_sca function returns a csv file that indicates for each day in the time series the percentage of the aoi that is covered by snow
 #' @seealso \code{\link{get_snowwarp_tiles}}, \code{\link{extract_snowwarp_stats}}, \code{\link{download_snowwarp_data}}, \code{\link{process_snowwarp}}
 #' @examples
 #' calculate_snowwarp_sca(
 #' folder = 'snowWarpFolder',
-#' aoi = 2004:2008,
-#' outputFolder = 8
+#' aoi = raster::shapefile("aoi.shp")
 #' )
 #' @export
 
@@ -27,7 +26,7 @@ calculate_snowwarp_sca <- function(folder, aoi) {
     requiredPackages[!(requiredPackages %in% installed.packages()[, "Package"])]
   if (length(new.packages))
     install.packages(new.packages)
-  
+
   infiles <- list.files(file.path(folder, "output"), full.names = T)
   inr <- lapply(infiles, raster::stack)
   s <- do.call(raster::stack, inr)
@@ -44,20 +43,20 @@ calculate_snowwarp_sca <- function(folder, aoi) {
   rm(inr, y, infiles)
   gc()
   gc()
-  
+
   s <- unstack(s) # convert to list of single raster layers
-  
+
   # perform the extraction
   sfInit(parallel = TRUE, cpus = 30)
   sfLibrary(raster)
   sfLibrary(rgdal)
   extracted <- sfSapply(s, extract,  y = aoi)
   sfStop()
-  
+
   names(extracted) <- names
   rm(s, aoi)
   gc()
-  
+
   data <- do.call(rbind, extracted)
   data <- t(data)
   write.table(
@@ -66,9 +65,9 @@ calculate_snowwarp_sca <- function(folder, aoi) {
     row.names = F,
     col.names = T
   )
-  
+
   data <- fread(file.path(folder, "extracted.csv"))
-  
+
   # variazione SCA
   calculateSCA = function(x) {
     x <- as.double(x)
@@ -79,9 +78,9 @@ calculate_snowwarp_sca <- function(folder, aoi) {
     npixels <- length(x)
     return((snowPixels / npixels) * 100)
   }
-  
+
   SCA <- apply(data, 2, calculateSCA)
-  
+
   write.table(SCA, file.path(folder, "SCA.csv"))
-  
+
 }
