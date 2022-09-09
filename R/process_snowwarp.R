@@ -1,13 +1,13 @@
 # Process SnowWarp Data
 #'
-#' last modified: Jan 13, 2022
+#' last modified: September 9, 2022
 #'
 #' This function processes SnowWarp using imagery downloaded from Google Earth Engine. Please refer to instruction manual
 #' \url{https://htmlpreview.github.io/?https://github.com/bermane/snowwarp/blob/master/start_snowwarp.html},
 #' to ensure you have properly downloaded the necessary imagery.
 #'
 #' @param folder The main directory where the Google Earth Engine files are located on your computer.
-#' @param years The years of data you want processed. Must be numeric and between 2000-2020. Snowwarp runs on winter years (Aug 1st - July 31st)
+#' @param years The years of data you want processed. Must be numeric and between 2000-2021. Snowwarp runs on winter years (Aug 1st - July 31st)
 #' instead of calendar years, so years = 2005 means August 1, 2005 - July 31, 2006, etc.
 #' It is better to run all the years you want at once, and less tiles.
 #' @param cpus The number of cpus to use for parallel processing. We recommend using at least half of the cpus on your machine. More if
@@ -51,7 +51,7 @@ process_snowwarp <-
   function(folder,
            #main directory where data is located
            years,
-           #years of processing output. 2005 means August 1, 2005 till July 31, 2006 etc. Must be between 2000-2019
+           #years of processing output. 2005 means August 1, 2005 till July 31, 2006 etc. Must be between 2000-2021
            cpus,
            #number of cpus to use for parallel processing
            otb_dir,
