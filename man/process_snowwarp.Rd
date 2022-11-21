@@ -37,7 +37,7 @@ After processing snowwarp you should set all values greater than 100 to NA}
 }
 \description{
 This function processes SnowWarp using imagery downloaded from Google Earth Engine. Please refer to instruction manual
-\url{https://htmlpreview.github.io/?https://github.com/bermane/snowwarp/blob/master/start_snowwarp.html},
+\url{https://github.com/bermane/snowwarp},
 to ensure you have properly downloaded the necessary imagery.
 }
 \examples{

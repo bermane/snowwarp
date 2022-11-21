@@ -3,7 +3,7 @@
 #' last modified: September 9, 2022
 #'
 #' This function processes SnowWarp using imagery downloaded from Google Earth Engine. Please refer to instruction manual
-#' \url{https://htmlpreview.github.io/?https://github.com/bermane/snowwarp/blob/master/start_snowwarp.html},
+#' \url{https://github.com/bermane/snowwarp},
 #' to ensure you have properly downloaded the necessary imagery.
 #'
 #' @param folder The main directory where the Google Earth Engine files are located on your computer.
