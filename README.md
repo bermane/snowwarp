@@ -1,6 +1,6 @@
 ## The SnowWarp tool
 
-Welcome to the snowwarp package! This package was created to provide open-source access to SnowWarp fractional snow covered area (fSCA) data and accompanying annual statistics. SnowWarp is a new data fusion approach to create a daily time-series of 30 m snow cover observations. It was created to meet the data needs of applied researchers, who desire a snow cover dataset with a high enough spatial and temporal resolution to match the scale of their work. The product is derived by leveaging daily MODIS snow cover data, which captures the temporal dynamics of snow cover, and Dynamic Time Warping (DTW), which is used to re-order historical Landsat observations to account for inter-annual variability. For more information on the SnowWarp algorithm and it's methods see [Berman et al. (2018)](https://www.sciencedirect.com/science/article/abs/pii/S0034425718303626). For methods of key annual snow statistics and a novel application of SnowWarp please see [Berman et al. (2019)](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0215243). 
+Welcome to the snowwarp package! This package was created to provide open-source access to SnowWarp fractional snow covered area (fSCA) data and accompanying annual statistics. SnowWarp is a new data fusion approach to create a daily time-series of 30 m snow cover observations. It was created to meet the data needs of applied researchers, who desire a snow cover dataset with a high enough spatial and temporal resolution to match the scale of their work. The product is derived by leveaging daily MODIS snow cover data, which captures the temporal dynamics of snow cover, and Dynamic Time Warping (DTW), which is used to re-order historical Landsat observations to account for inter-annual variability. For more information on the SnowWarp algorithm and it's methods see [Berman et al. (2018)](https://www.sciencedirect.com/science/article/abs/pii/S0034425718303626) and [Vaglio Laurin et al. (2022)](https://www.sciencedirect.com/science/article/abs/pii/S1364815222001815). For methods of key annual snow statistics and a novel application of SnowWarp please see [Berman et al. (2019)](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0215243). 
 
 Please note the following when using SnowWarp:
 
@@ -9,7 +9,7 @@ Please note the following when using SnowWarp:
 3. Data is currently available from August 1, 2000 until July 31, 2021. New data will be added at the end of each annual 'winter' year (i.e. late summer).
 3. Use of SnowWarp data is free but must be cited. Please cite:
 
-  i) Gaia Vaglio Laurin, Saverio Francini, Daniele Penna, Giulia Zuecco, Gherardo Chirici, Ethan Berman, Nicholas Coops, Giulio Castelli, Elena Bresci, Federico Preti, Riccardo Valentini. SnowWarp: an open science and open data tool for daily monitoring of snow dynamics. Environmental modelling and software. In review.   
+  i) [Vaglio Laurin et al. (2022)](https://www.sciencedirect.com/science/article/abs/pii/S1364815222001815)
 
   ii) [Berman et al. (2018)](https://www.sciencedirect.com/science/article/abs/pii/S0034425718303626)
 
@@ -72,4 +72,4 @@ Thanks for your interest in these data! We are very excited to share SnowWarp wi
 
 Best of luck,
 
-Ethan Berman, Saverio Francini, and Nicholas Coops. 2020.
+Ethan Berman, Saverio Francini, and Nicholas Coops. 2022.

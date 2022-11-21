@@ -1,6 +1,6 @@
 Package: snowwarp
 Title: Implement SnowWarp Algorithm
-Version: 0.0.0.9400
+Version: 0.0.0.9500
 Authors@R: 
     c(person(given = "Ethan E.",
            family = "Berman",

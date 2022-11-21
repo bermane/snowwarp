@@ -69,12 +69,11 @@ extract_snowwarp_stats <- function(
   #define moving window size
   window <- 31
 
-  #define number of interations
-  num_iter = 100
-
   #loop through landsat files
   for(l in 1:length(snow_files)) {
 
+    if(isFALSE(dir.exists("temp"))) dir.create("temp")
+    
     #create output file base
     out_f <- stringr::str_replace(snow_files[l], 'snowwarp', 'snowwarp_stats') %>%
       stringr::str_replace(., 'output', 'temp')
@@ -82,8 +81,14 @@ extract_snowwarp_stats <- function(
     #load snowwarp brick
     ras <- raster::brick(snow_files[l])
 
+    #define number of interations
+    num_iter = 100
+    if(nrow(ras)<300){
+      num_iter <- round(nrow(ras)/4)
+    }
+    
     #find segment of rows to run
-    row_seg <- split(1:nrow(ras), factor(sort(rank(1:nrow(ras))%%100)))
+    row_seg <- split(1:nrow(ras), factor(sort(rank(1:nrow(ras))%%num_iter)))
 
     ## clean parallel computing
     unregister_dopar <- function() {
