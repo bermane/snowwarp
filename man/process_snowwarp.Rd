@@ -2,7 +2,7 @@
 % Please edit documentation in R/process_snowwarp.R
 \name{process_snowwarp}
 \alias{process_snowwarp}
-\title{last modified: September 9, 2022}
+\title{last modified: December 2, 2022}
 \usage{
 process_snowwarp(folder, years, cpus, otb_dir, max_ram = 256, tiles = NULL)
 }

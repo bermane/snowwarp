@@ -1,6 +1,6 @@
 # Process SnowWarp Data
 #'
-#' last modified: September 9, 2022
+#' last modified: December 2, 2022
 #'
 #' This function processes SnowWarp using imagery downloaded from Google Earth Engine. Please refer to instruction manual
 #' \url{https://github.com/bermane/snowwarp},
