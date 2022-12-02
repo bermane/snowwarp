@@ -70,6 +70,7 @@ process_snowwarp <-
                'tidyverse',
                'gdalUtils',
                'raster',
+               'terra',
                'doParallel',
                'foreach',
                'pspline',
@@ -267,23 +268,13 @@ process_snowwarp <-
              ls_ras <- raster::brick(ls_files[l])
 
              # crop to ensure extent is smaller than MODIS extent
-             ls_ras2 <- raster::crop(ls_ras, mod_id)
-
-             # only rewrite file if there was a change to extent
-             if(ls_ras@extent != ls_ras2@extent){
-
-               # remove original raster
-               rm(ls_ras)
-
-               # write out landsat file
-               raster::writeRaster(ls_ras2, filename = ls_files[l],
+             ls_ras <- terra::crop(terra::rast(ls_ras), terra::rast(mod_id),
+                                   filename = file.path(folder, paste0('ls', l, '.tif')),
                                    datatype = 'INT1U',
                                    overwrite = T)
 
-               # load new raster
-               ls_ras <- ls_ras2
-               rm(ls_ras2)
-             } else {rm(ls_ras2)}
+             # convert back to brick
+             ls_ras <- raster::brick(ls_ras)
 
              ##################################
              ###BUILD LANDSAT MODIS RELATION###
@@ -309,6 +300,7 @@ process_snowwarp <-
 
              #loop through each modis pixel
              invisible(foreach::foreach(id = 1:nrow(mod_loc)) %dopar% {
+
                #####################
                ###TIME WARP MODIS###
                #####################
@@ -670,7 +662,8 @@ process_snowwarp <-
                        snow <-
                          sapply(unique_doy, function(doy) {
                            apply(
-                             ls_p[, , band_id[warp_doy == doy]],
+                             array(ls_p[, , band_id[warp_doy == doy]],
+                                   dim = c(NROW(ls_p), NCOL(ls_p), length(band_id[warp_doy == doy]))),
                              c(1, 2),
                              FUN = function(x)
                                mean(x, na.rm = T)
@@ -853,7 +846,8 @@ process_snowwarp <-
                    #fill output raster with values
                    ls <-
                      raster::brick(
-                       ls_out[, , , i],
+                       array(ls_out[, , , i],
+                             dim = dim(ls_out)[1:3]),
                        xmn = raster::extent(ls)[1],
                        xmx = raster::extent(ls)[2],
                        ymn = raster::extent(ls)[3],
